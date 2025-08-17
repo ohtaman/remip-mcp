@@ -1,0 +1,159 @@
+name = "design"
+description = "Create detailed design specification based on requirements (Stage 2 of Spec-Driven Development)"
+prompt = '''
+## Context
+
+- Requirements document: @.tmp/docs/requirements.md
+
+## Your task
+
+### 1. Verify prerequisites
+
+- Check that `.tmp/docs/requirements.md` exists
+- If not, inform user to run `/requirements` first
+
+### 2. Analyze requirements
+
+**IMPORTANT: When investigating existing files or code, you MUST use serena. Using serena reduces token consumption by 60-80% and efficiently retrieves necessary information through semantic search capabilities.**
+
+Read and understand the requirements document thoroughly
+
+### 3. Create Design Document
+
+Create `.tmp/docs/design.md` with the following sections:
+
+````markdown
+# Detailed Design - [Task Name]
+
+## 1. Architecture Overview
+
+### 1.1 System Architecture Diagram
+
+[Represent the overall system architecture using ASCII or Mermaid diagrams]
+
+### 1.2 Technology Stack
+
+- Language: [Language and version]
+- Frameworks: [Frameworks used]
+- Libraries: [List of major libraries]
+- Tools: [Build tools, testing tools, etc.]
+
+## 2. Component Design
+
+### 2.1 Component List
+
+| Component Name | Responsibility | Dependencies |
+| :--- | :--- | :--- |
+| [Component A] | [Description of responsibility] | [Dependent components] |
+
+### 2.2 Component Details
+
+#### [Component A]
+
+- **Purpose**: [Purpose of this component]
+- **Public Interface**:
+  ```typescript
+  interface ComponentA {
+    method1(param: Type): ReturnType;
+  }
+  ```
+
+- **Internal Implementation Strategy**: [Approach to implementation]
+
+## 3. Data Flow
+
+### 3.1 Data Flow Diagram
+
+[Diagram showing the flow of data]
+
+### 3.2 Data Transformation
+
+- Input Data Format: [Description of format]
+- Processing Steps: [Transformation logic]
+- Output Data Format: [Description of format]
+
+## 4. API Interface
+
+### 4.1 Internal API
+
+[Interface definitions between modules]
+
+### 4.2 External API
+
+[Interface definitions for interaction with external systems]
+
+## 5. Error Handling
+
+### 5.1 Error Classification
+
+- [Error Type 1]: [How to handle]
+- [Error Type 2]: [How to handle]
+
+### 5.2 Error Notification
+
+[Error notification methods and logging strategy]
+
+## 6. Security Design
+
+### 6.1 Authentication & Authorization
+
+[Describe if necessary]
+
+### 6.2 Data Protection
+
+[How sensitive data is handled]
+
+## 7. Test Design
+
+**For detailed test design, please run the `/test-design` command to create a test design document.**
+
+That document will define:
+- Test cases for normal, edge, and boundary conditions
+- Test data design
+- Performance and security testing
+- Automation strategy
+
+## 8. Performance Optimization
+
+### 8.1 Expected Load
+
+[Performance requirements]
+
+### 8.2 Optimization Strategy
+
+[Approach to optimization]
+
+## 9. Deployment
+
+### 9.1 Deployment Configuration
+
+[How to deploy to the production environment]
+
+### 9.2 Configuration Management
+
+[Management of environment variables, configuration files]
+
+## 10. Implementation Notes
+
+- [Note 1]
+- [Note 2]
+
+````
+
+### 4. Update TODO
+Use TodoWrite to add "Detailed design complete and ready for review" as a task
+
+### 5. Present to user
+Show the created design document and ask for:
+- Technical feedback
+- Architecture approval
+- Permission to proceed to task breakdown
+
+## Important Notes
+- Design should be implementable and testable
+- Consider maintainability and extensibility
+- Include concrete interface definitions where possible
+- Address all requirements from the requirements document
+
+think hard
+'''

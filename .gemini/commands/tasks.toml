@@ -1,0 +1,136 @@
+name = "tasks"
+description = "Break down design into implementable tasks (Stage 3 of Spec-Driven Development)"
+prompt = '''
+## Context
+
+- Requirements: @.tmp/docs/requirements.md
+- Design document: @.tmp/docs/design.md
+
+## Your task
+
+### 1. Verify prerequisites
+
+- Check that both `.tmp/docs/requirements.md` and `.tmp/docs/design.md` exist
+- If not, inform user to complete previous stages first
+
+### 2. Analyze design document
+
+**IMPORTANT: When investigating existing files or code, you MUST use serena. Using serena reduces token consumption by 60-80% and efficiently retrieves necessary information through semantic search capabilities.**
+
+Read and understand the design thoroughly to identify all implementation tasks
+
+### 3. Create Task List Document
+
+Create `.tmp/docs/tasks.md` with the following structure:
+
+```markdown
+# Task List - [Feature/Improvement Name]
+
+## Overview
+
+- Total Tasks: [Number]
+- Estimated Time: [Hours/Days]
+- Priority: [High/Medium/Low]
+
+## Task Breakdown
+
+### Phase 1: Preparation & Research
+
+#### Task 1.1: [Task Name]
+
+- [ ] [Specific work item 1]
+- [ ] [Specific work item 2]
+- [ ] [Specific work item 3]
+- **Definition of Done**: [Clear completion criteria]
+- **Dependencies**: [Dependent task or None]
+- **Estimated Time**: [Time]
+
+#### Task 1.2: [Task Name]
+
+- [ ] [Specific work item 1]
+- [ ] [Specific work item 2]
+- **Definition of Done**: [Clear completion criteria]
+- **Dependencies**: [Dependent task]
+- **Estimated Time**: [Time]
+
+### Phase 2: Implementation
+
+#### Task 2.1: Implement [Feature Name]
+
+- [ ] [Implementation item 1]
+- [ ] [Implementation item 2]
+- [ ] [Implementation item 3]
+- **Definition of Done**: [Clear completion criteria]
+- **Dependencies**: [Dependent task]
+- **Estimated Time**: [Time]
+
+### Phase 3: Verification & Testing
+
+#### Task 3.1: [Verification Item]
+
+- [ ] [Test item 1]
+- [ ] [Test item 2]
+- **Definition of Done**: [Clear completion criteria]
+- **Dependencies**: [Dependent task]
+- **Estimated Time**: [Time]
+
+### Phase 4: Finalization
+
+#### Task 4.1: [Finalization Item]
+
+- [ ] [Finalization task 1]
+- **Definition of Done**: [Clear completion criteria]
+- **Dependencies**: [Dependent task]
+- **Estimated Time**: [Time]
+
+## Implementation Order
+
+1.  Execute tasks sequentially starting from Phase 1.
+2.  Tasks that can be parallelized should be.
+3.  Consider dependencies when determining the implementation order.
+
+## Risks and Mitigations
+
+- [Identified Risk]: [Mitigation Strategy]
+
+## Notes
+
+- Each task should be self-contained within a single commit.
+- Perform quality checks as needed upon task completion.
+- Clarify any ambiguities before starting implementation.
+```
+
+### 4. Register tasks in tasks.md
+
+Extract main tasks (Phase level or important tasks) and register them to the .tmp/docs/tasks.md with appropriate priorities
+
+### 5. Create implementation guide
+
+Add a section at the end of tasks.md:
+
+```markdown
+## Implementation Guide
+
+1.  Follow this task list to proceed with implementation.
+2.  Update the status in tasks.md to `in_progress` when starting a task.
+3.  Update the status to `completed` upon completion.
+4.  Report any issues immediately.
+```
+
+### 6. Present to user
+
+Show the task breakdown and:
+
+- Explain the implementation order
+- Highlight any critical paths
+- Ask for approval to begin implementation
+
+## Important Notes
+
+- Tasks should be commit-sized (completable in 1-4 hours)
+- Include clear completion criteria for each task
+- Consider parallel execution opportunities
+- Include testing tasks throughout, not just at the end
+
+think hard
+'''

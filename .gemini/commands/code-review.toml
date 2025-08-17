@@ -1,0 +1,86 @@
+name = "code-review"
+description = "Perform a thorough code review of pull requests following established guidelines, focusing on code quality, best practices, and maintainability while providing constructive feedback"
+prompt = '''
+## Code Review Rules
+
+Review the pull request specified by the PR number provided in the command arguments.
+
+Usage: `/code-review <PR_NUMBER>`
+Example: `/code-review 001`
+
+The PR number will be available as `$ARGUMENTS`.
+
+Review process:
+
+**IMPORTANT: When investigating existing files or code, you MUST use serena. Using serena reduces token consumption by 60-80% and efficiently retrieves necessary information through semantic search capabilities.**
+
+1. **Get PR information:** Use the github cli ( `gh pr view $arguments`) to get the pr details.
+2. **Explore changes:** Use "gh pr diff $arguments" to check for code changes.
+3. **Do code review:** Check the details of the PR and perform a code review.
+4. **Run review:** Perform code reviews according to `Important Guidelines for Write a Comment`".
+5. **Report review results** Instead of using something like create pull_request_review, save the review results in `.tmp`. Add a comment to a line that has improvements or concerns. If revisions are clear, use the suggestions proactively.
+
+**Important Guidelines for Writing Comments**
+
+- **Inline Comment Structure:**
+
+  - **Lead with the conclusion:** Use a one-line summary of the main point, including code differences, line numbers, filenames, and the review content.
+  - **Reasoning and suggestions:** After the conclusion, provide a detailed explanation of your reasoning, background, and specific suggestions.
+  - **Focus on issues:** Inline comments should focus on specific improvements like bug fixes, potential bugs, or readability issues.
+
+- **Regarding Positive Feedback:**
+
+  - **Be selective inline:** Only mention exceptional design choices or innovative implementations that other developers can learn from.
+  - **Summarize positives:** Consolidate overall positive aspects and general impressions in the summary comment when submitting the review.
+
+- **Review Format**
+  - **Write a review in Markdown**: Save the review results to `.tmp`.
+  - **Write a review in English**: Please write code reviews in the format below.
+
+---
+
+# PR Number and Title
+
+## Summary of Changes
+
+## Changed Files
+
+## Detailed Analysis of Code Changes
+
+## Review Comments
+
+### Positive Points
+
+### Areas for Improvement / Points to Confirm
+
+## Conclusion
+
+---
+
+**Review Perspectives**
+
+Focus on the following aspects during review:
+
+- Compliance with CLAUDE.md guidelines
+- Adherence to code quality and best practices
+  - Separate responsibilities properly
+  - Maximize code reusability
+  - Avoid unnecessary code
+  - Return all API data unless performance impact is significant
+  - Verify object equality in tests
+  - Apply consistent styling throughout the app
+  - Maintain variable naming consistency
+  - Display frontend errors appropriately, avoid raw responses
+  - Consider appropriate processing location (backend vs frontend)
+- Check for bugs or security risks
+- Identify performance concerns
+- Ensure maintainability and readability
+- Validate design and architecture decisions
+
+**Additional Notes**
+
+- Provide feedback in English.
+- Give specific and actionable feedback.
+
+think super hard
+'''

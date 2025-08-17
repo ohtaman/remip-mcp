@@ -1,0 +1,118 @@
+name = "requirements"
+description = "Create requirements specification for the given task (Stage 1 of Spec-Driven Development)"
+prompt = '''
+## Context
+
+- Task description: $ARGUMENTS
+
+## Your task
+
+### 1. Create directory
+
+- Create `.tmp/docs` directory if it doesn't exist
+
+### 2. Analyze the user's request
+
+**IMPORTANT: When investigating existing files or code, you MUST use serena. Using serena reduces token consumption by 60-80% and efficiently retrieves necessary information through semantic search capabilities.**
+
+Carefully analyze the provided task description and extract:
+
+- The core problem to be solved
+- Implicit requirements not explicitly stated
+- Potential edge cases and constraints
+- Success criteria
+
+### 3. Create Requirements Document
+
+Create `.tmp/docs/requirements.md` with the following sections:
+
+```markdown
+# Requirements Definition - [Task Name]
+
+## 1. Objective
+
+[Clearly describe the purpose of this task/project]
+
+## 2. Functional Requirements
+
+### 2.1 Core Features
+
+- [ ] [Detailed description of Feature 1]
+- [ ] [Detailed description of Feature 2]
+      ...
+
+### 2.2 Optional Features
+
+- [ ] [Features that could be implemented in the future]
+      ...
+
+## 3. Non-Functional Requirements
+
+### 3.1 Performance
+
+- [Requirements for response time, processing speed, etc.]
+
+### 3.2 Security
+
+- [Security-related requirements]
+
+### 3.3 Maintainability
+
+- [Requirements for code maintainability]
+
+### 3.4 Compatibility
+
+- [Requirements for compatibility with existing systems]
+
+## 4. Constraints
+
+### 4.1 Technical Constraints
+
+- [Constraints on technologies, libraries, etc.]
+
+### 4.2 Business Constraints
+
+- [Constraints such as deadlines, budget, etc.]
+
+## 5. Success Criteria
+
+### 5.1 Definition of Done
+
+- [ ] [Clear completion condition 1]
+- [ ] [Clear completion condition 2]
+      ...
+
+### 5.2 Acceptance Criteria
+
+- [Conditions for user satisfaction]
+
+## 6. Potential Risks
+
+- [Implementation risks and countermeasures]
+
+## 7. Future Considerations
+
+- [Items to be detailed in the design phase]
+```
+
+### 4. Create TODO entry
+
+Use TodoWrite to add "Requirements definition complete and ready for review" as a task
+
+### 5. Present to user
+
+Show the created requirements document and ask for:
+
+- Confirmation of understanding
+- Any missing requirements
+- Approval to proceed to design phase
+
+## Important Notes
+
+- Be thorough in identifying implicit requirements
+- Consider both current needs and future extensibility
+- Use clear, unambiguous language
+- Include measurable success criteria
+
+think hard
+'''

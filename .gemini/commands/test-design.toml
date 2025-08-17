@@ -1,0 +1,186 @@
+name = "test-design"
+description = "Create comprehensive test specification based on design document (Stage 3 of Spec-Driven Development)"
+prompt = '''
+## Context
+
+- Design document: @.tmp/docs/design.md
+
+## Your task
+
+### 1. Verify prerequisites
+
+- Check that `.tmp/docs/design.md` exists
+- If not, inform user to run `/design` first
+
+### 2. Analyze design document
+
+**IMPORTANT: When investigating existing files or code, you MUST use serena. Using serena reduces token consumption by 60-80% and efficiently retrieves necessary information through semantic search capabilities.**
+
+Read and understand the design document thoroughly, focusing on:
+
+- API endpoints and interfaces
+- Component behaviors
+- Data flows
+- Error handling requirements
+
+### 3. Create Test Design Document
+
+Create `.tmp/docs/test_design.md` with the following sections:
+
+````markdown
+# Test Design - [Task Name]
+
+## 1. Test Overview
+
+### 1.1 Test Objective
+
+- [The purpose of this test suite]
+
+### 1.2 Test Scope
+
+- In Scope: [Components/APIs to be tested]
+- Out of Scope: [Items that will not be tested]
+
+### 1.3 Test Environment
+
+- Environment: [Test execution environment]
+- Dependencies: [Required external services or mocks]
+
+## 2. Test Case Design
+
+### 2.1 Test Cases for [Component/API A]
+
+#### 2.1.1 Normal Cases
+
+| ID   | Test Case Name | Input Data | Expected Result | Priority |
+| :--- | :--- | :--- | :--- | :--- |
+| T001 | [Case Name]    | [Input]    | [Expected Output] | High     |
+
+#### 2.1.2 Error Cases
+
+| ID   | Test Case Name | Input Data | Expected Result | Priority |
+| :--- | :--- | :--- | :--- | :--- |
+| T101 | [Error Case]   | [Invalid Input] | [Error Response] | High     |
+
+#### 2.1.3 Boundary Cases
+
+| ID   | Test Case Name | Input Data | Expected Result | Priority |
+| :--- | :--- | :--- | :--- | :--- |
+| T201 | [Boundary Case] | [Boundary Data] | [Expected Behavior] | Medium   |
+
+### 2.2 Integration Test Scenarios
+
+#### Scenario 1: [Scenario Name]
+
+1.  Prerequisites: [Initial state]
+2.  Test Steps:
+    - Step 1: [Action]
+    - Step 2: [Action]
+    - Step 3: [Action]
+3.  Expected Result: [Final state]
+
+## 3. Test Data Design
+
+### 3.1 Master Data
+
+```json
+{
+  "testData": {
+    "valid": {
+      /* Data for normal cases */
+    },
+    "invalid": {
+      /* Data for error cases */
+    },
+    "boundary": {
+      /* Data for boundary cases */
+    }
+  }
+}
+```
+
+### 3.2 Mock Data
+
+- [Mock responses for external services]
+
+## 4. Performance Testing
+
+### 4.1 Load Testing
+
+- Concurrent Users: [Number]
+- Requests/Second: [Number]
+- Expected Response Time: [Milliseconds]
+
+### 4.2 Stress Testing
+
+- Maximum Load Conditions: [Conditions]
+- Expected Behavior: [Behavior]
+
+## 5. Security Testing
+
+### 5.1 Authentication & Authorization Tests
+
+- Unauthenticated access test
+- Insufficient permissions test
+- Token expiration test
+
+### 5.2 Input Validation Tests
+
+- SQL Injection
+- XSS
+- Path Traversal
+
+## 6. Test Execution Plan
+
+### 6.1 Execution Order
+
+1.  Unit Tests
+2.  Integration Tests
+3.  Performance Tests
+4.  Security Tests
+
+### 6.2 Pass/Fail Criteria
+
+- Code Coverage: [%]
+- All test cases passing
+- Performance criteria met
+
+## 7. Risks and Mitigations
+
+| Risk      | Impact | Probability | Mitigation |
+| :--- | :--- | :--- | :--- |
+| [Risk 1]  | High   | Medium      | [Mitigation] |
+
+## 8. Test Automation Strategy
+
+### 8.1 Automation Scope
+
+- [Test cases to be automated]
+
+### 8.2 CI/CD Integration
+
+- [How to run continuous testing]
+````
+
+### 4. Update TODO
+
+Use TodoWrite to add "Test design complete and ready for review" as a task
+
+### 5. Present to user
+
+Show the created test design document and ask for:
+
+- Test coverage feedback
+- Test case approval
+- Permission to proceed to task breakdown
+
+## Important Notes
+
+- Cover all critical paths from the design document
+- Include edge cases and error scenarios
+- Consider performance and security aspects
+- Make test cases specific and measurable
+- Ensure test data is realistic and comprehensive
+
+think hard
+'''
