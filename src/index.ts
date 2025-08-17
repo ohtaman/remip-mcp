@@ -1,4 +1,12 @@
-import { add } from './utils/math.js';
+import express from "express";
 
 
-console.log(add(3, 4));
+const app = express();
+app.use(express.json());
+
+app.get("/health", async (req, res) => {
+    console.log("hello");
+    res.json("hello");
+})
+
+app.listen(3000)
