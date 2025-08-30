@@ -5,12 +5,43 @@ import { ChildProcess, spawn } from "child_process";
 import express from "express";
 import { parseArgs } from "node:util";
 import { z } from "zod";
+import pino, { Logger } from "pino";
 import { defaultConfig } from "./config.js";
+import { randomUUID } from "crypto";
 
 interface ReMIPInfo {
   host: string;
   port: number;
 }
+
+const logger: Logger = pino({
+  level: process.env.LOG_LEVEL ?? "info",
+  base: {
+    service: "remip-mcp",
+    env: process.env.NODE_ENV ?? "dev",
+    version: process.env.APP_VERSION ?? "dev",
+  },
+  serializers: { err: pino.stdSerializers.err },
+  redact: {
+    // 将来の機密流出に備えて保守的に
+    paths: [
+      "req.headers.authorization",
+      "req.headers.cookie",
+      "config.remipInfo.token",
+    ],
+    censor: "[REDACTED]",
+  },
+  transport:
+    process.env.NODE_ENV === "production"
+      ? undefined
+      : {
+          target: "pino-pretty",
+          options: { translateTime: "SYS:standard", singleLine: true },
+        },
+});
+
+const remipLog = logger.child({ component: "remip" });
+const httpLog = logger.child({ component: "http" });
 
 // Global variable to track the ReMIP process
 let remipProcess: ChildProcess | null = null;
@@ -22,31 +53,59 @@ function startReMIPServer(): Promise<ReMIPInfo> {
       "--from=git+https://github.com/ohtaman/remip.git#subdirectory=remip",
       "remip",
     ];
-    console.log(`Executing: ${command} ${args.join(" ")}`);
+
+    remipLog.info(
+      { event: "subprocess_spawn", command, args },
+      `Executing: ${command} ${args.join(" ")}`
+    );
 
     remipProcess = spawn(command, args, {
-      // Create new process group for proper cleanup
       detached: false,
       stdio: ["pipe", "pipe", "pipe"],
     });
 
+    let resolved = false;
+    const MAX_LINE = 10_000; // ログ汚染防止に一応ガード
+
     remipProcess.stdout?.on("data", (data) => {
-      console.error(`[ReMIP Server]: ${data.toString()}`);
+      const line = data.toString().slice(0, MAX_LINE);
+      remipLog.info(
+        { event: "subprocess_output", stream: "stdout", line },
+        "ReMIP server stdout"
+      );
     });
 
     remipProcess.stderr?.on("data", (data) => {
-      const output = data.toString();
-      console.log(`[ReMIP Server]: ${output}`); // ログを出力
-      const match = output.match(/running on http:\/\/(\S+):(\d+)/);
-      if (match && match[1] && match[2]) {
-        resolve({ host: match[1], port: parseInt(match[2], 10) });
+      const output = data.toString().slice(0, MAX_LINE);
+      remipLog.info(
+        { event: "subprocess_output", stream: "stderr", line: output },
+        "ReMIP server stderr"
+      );
+
+      if (!resolved) {
+        const match = output.match(/running on http:\/\/(\S+):(\d+)/i);
+        if (match?.[1] && match?.[2]) {
+          resolved = true;
+          resolve({ host: match[1], port: parseInt(match[2], 10) });
+        }
       }
     });
 
     remipProcess.on("close", (code) => {
-      if (code !== 0) {
-        reject(new Error(`ReMIP server process exited with code ${code}`));
+      const level = code === 0 ? "info" : "fatal";
+      (remipLog as any)[level](
+        { event: "subprocess_exit", code },
+        `ReMIP server process exited with code ${code}`
+      );
+      if (!resolved) {
+        // まだ起動情報を返せていない場合は reject
+        reject(new Error(`ReMIP server exited before ready (code ${code})`));
       }
+    });
+
+    remipProcess.on("error", (err) => {
+      remipLog.fatal({ event: "subprocess_error", err }, "spawn error");
+      if (!resolved) reject(err);
     });
   });
 }
@@ -54,42 +113,46 @@ function startReMIPServer(): Promise<ReMIPInfo> {
 // Function to clean up the ReMIP process and all its children
 function cleanupReMIPProcess() {
   if (remipProcess && !remipProcess.killed && remipProcess.pid) {
-    console.log(
-      `Terminating ReMIP server process tree (PID: ${remipProcess.pid})...`
+    remipLog.info(
+      { event: "subprocess_terminate", pid: remipProcess.pid },
+      `Terminating ReMIP server process (PID: ${remipProcess.pid})`
     );
-
     try {
       remipProcess.kill("SIGTERM");
-    } catch (killError) {
-      console.log("process kill also failed:", killError);
+    } catch (err) {
+      remipLog.error(
+        { event: "subprocess_terminate_failed", err },
+        "Process kill failed"
+      );
     }
   }
 }
 
-// Set up signal handlers to clean up the ReMIP process
-function setupSignalHandlers() {
-  const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
-
-  signals.forEach((signal) => {
-    process.on(signal, () => {
-      console.log(`Received ${signal}, cleaning up...`);
-      cleanupReMIPProcess();
-      process.exit(0);
-    });
-  });
-
-  // Handle uncaught exceptions and unhandled rejections
-  process.on("uncaughtException", (error) => {
-    console.error("Uncaught exception:", error);
+// Use pino.final to ensure logs are flushed before exit
+function installProcessHandlers() {
+  const finalize = (code: number, msg: string, err?: unknown) => {
+    if (err instanceof Error) {
+      logger.fatal({ event: "process_exit", err }, msg);
+    } else if (err != null) {
+      logger.fatal({ event: "process_exit", err: new Error(String(err))}, msg);
+    } else {
+      logger.info({ event: "process_exit" }, msg);
+    }
     cleanupReMIPProcess();
-    process.exit(1);
+    logger.flush();
+    process.exit(code);
+  }
+
+  (["SIGINT", "SIGTERM", "SIGHUP"] as NodeJS.Signals[]).forEach((sig) => {
+    process.on(sig, () => finalize(0, `signal received: ${sig}`));
   });
 
-  process.on("unhandledRejection", (reason) => {
-    console.error("Unhandled rejection:", reason);
-    cleanupReMIPProcess();
-    process.exit(1);
-  });
+  process.on("uncaughtException", (err) =>
+    finalize(1, "uncaughtException", err)
+  );
+  process.on("unhandledRejection", (reason) =>
+    finalize(1, "unhandledRejection", reason as any)
+  );
 }
 
 async function setupMcpServer(
@@ -116,12 +179,14 @@ async function setupMcpServer(
           .string()
           .describe(
             "The MIP solver to use. If not specified, the default SCIP solver will be used."
-          ),
+          )
+          .optional(),
         timeLimit: z
           .number()
           .describe(
             "The time limit in seconds. If not specified, the default time limit 3600 seconds will be used."
-          ),
+          )
+          .optional(),
       },
       outputSchema: {
         status: z.union([
@@ -133,28 +198,23 @@ async function setupMcpServer(
         ]),
         solution: z
           .object({
-            objective: z
-              .number()
-              .describe("The objective value of the solution."),
-            variables: z.object({
-              name: z.string().describe("The name of the variable."),
-              value: z.number().describe("The value of the variable."),
-            }),
+            objective: z.number().describe("The objective value of the solution."),
+            variables: z
+              .array(
+                z.object({
+                  name: z.string().describe("The name of the variable."),
+                  value: z.number().describe("The value of the variable."),
+                })
+              )
+              .describe("Decision variables and values."),
           })
           .nullable(),
-        error_message: z
-          .string()
-          .describe("The error message of the solution.")
-          .nullable(),
-        logs: z
-          .array(z.string())
-          .describe(
-            "The logs of the solution. The logs are the output of the MIP solver."
-          )
-          .nullable(),
+        error_message: z.string().nullable(),
+        logs: z.array(z.string()).nullable(),
       },
     },
     async ({ code }) => {
+      // TODO: 実装本体は別PRで。ここではダミー。
       return {
         structuredContent: {
           status: "not_solved",
@@ -162,16 +222,12 @@ async function setupMcpServer(
           error_message: null,
           logs: null,
         },
-        content: [
-          {
-            type: "text",
-            text: "Solving the problem...",
-          },
-        ],
+        content: [{ type: "text", text: "Solving the problem..." }],
         isError: false,
       };
     }
   );
+
   await mcpServer.connect(transport);
   return mcpServer;
 }
@@ -181,29 +237,52 @@ function setupAppServer(
   port: number,
   transport: StreamableHTTPServerTransport
 ) {
-  // 5. 確定した設定値を使ってExpressサーバーを起動
   const app = express();
   app.use(express.json());
 
+  // ---- HTTP共通メタ（req_id, latency）付与
+  app.use((req, res, next) => {
+    const start = process.hrtime.bigint();
+    const reqId = (req.headers["x-request-id"] as string) ?? randomUUID();
+    res.setHeader("x-request-id", reqId);
+    // 子ロガーをぶら下げる
+    (req as any).log = httpLog.child({ req_id: reqId });
+
+    res.on("finish", () => {
+      const latency_ms = Number(
+        (process.hrtime.bigint() - start) / 1_000_000n
+      );
+      (req as any).log.info(
+        {
+          event: "http_access",
+          method: req.method,
+          path: req.path,
+          status: res.statusCode,
+          latency_ms,
+        },
+        "http request"
+      );
+    });
+    next();
+  });
+
   app.get("/health", async (req, res) => {
-    console.log("Health check successful");
+    (req as any).log?.info({ event: "health_check" }, "Health check OK");
     res.status(200).end();
   });
 
   app.post("/mcp", async (req, res) => {
     try {
       await transport.handleRequest(req, res, req.body);
-    } catch (error) {
-      console.error("Error handling MCP request:", error);
+    } catch (err) {
+      (req as any).log?.error(
+        { event: "mcp_request_error", err },
+        "Error handling MCP request"
+      );
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: "2.0",
-          error: {
-            // JSON-RPC 2.0のエラーコードを指定
-            // http://www.jsonrpc.org/specification#error_object
-            code: -32603,
-            message: "Internal server error",
-          },
+          error: { code: -32603, message: "Internal server error" },
           id: null,
         });
       }
@@ -211,29 +290,30 @@ function setupAppServer(
   });
 
   app.get("/mcp", async (req, res) => {
-    console.log("Received GET MCP request");
-    res.writeHead(405).end(
-      JSON.stringify({
-        jsonrpc: "2.0",
-        error: {
-          code: -32000,
-          message: "Method not allowed.",
-        },
-        id: null,
-      })
-    );
+    (req as any).log?.info({ event: "mcp_get_request" }, "GET /mcp not allowed");
+    res
+      .writeHead(405)
+      .end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Method not allowed." },
+          id: null,
+        })
+      );
   });
 
   app.listen(port, () => {
-    console.log(`Application server listening at http://localhost:${port}`);
+    httpLog.info(
+      { event: "server_listen", url: `http://localhost:${port}` },
+      `Application server listening at http://localhost:${port}`
+    );
   });
 }
 
 async function main() {
-  // Set up signal handlers first
-  setupSignalHandlers();
+  installProcessHandlers();
 
-  // 1. コマンドラインオプションを定義 (config.tsのキーと対応させる)
+  // 1. CLI options
   const options = {
     http: { type: "boolean" },
     port: { type: "string" },
@@ -243,30 +323,33 @@ async function main() {
     help: { type: "boolean", short: "h" },
   } as const;
 
-  // 2. コマンドライン引数をパース
+  // 2. Parse args
   const { values: cliArgs } = parseArgs({
     allowPositionals: false,
     args: process.argv.slice(2),
-    options: options,
+    options,
   });
 
-  // ヘルプオプションが指定された場合は使い方を表示して終了
+  // 3. Help
   if (cliArgs.help) {
-    console.log(`
+    // ログと混在させないためstdoutに直接
+    process.stdout.write(
+      `
 Usage: node index.js [options]
 
 Options:
-  --http                    Start an HTTP server (Default: ${defaultConfig.http})
-  --port <port>           Port for this application server (Default: ${defaultConfig.port})
-  --remip-host <host>         Hostname of the ReMIP server (Default: ${defaultConfig.remipServer.host})
-  --remip-port <port>         Port of the ReMIP server (Default: ${defaultConfig.remipServer.port})
-  --start-remip-server        Start a local ReMIP server on launch (Default: ${defaultConfig.startRemipServer})
-  -h, --help                  Show this help message
-`);
+  --http                       Start an HTTP server (Default: ${defaultConfig.http})
+  --port <port>                Port for this application server (Default: ${defaultConfig.port})
+  --remip-host <host>          Hostname of the ReMIP server (Default: ${defaultConfig.remipServer.host})
+  --remip-port <port>          Port of the ReMIP server (Default: ${defaultConfig.remipServer.port})
+  --start-remip-server         Start a local ReMIP server on launch (Default: ${defaultConfig.startRemipServer})
+  -h, --help                   Show this help message
+`.trimStart()
+    );
     return;
   }
 
-  // 3. 設定のマージ (デフォルト設定をコマンドライン引数で上書き)
+  // 4. Merge config
   const config = {
     http: cliArgs.http ?? defaultConfig.http,
     port: cliArgs["port"] ? parseInt(cliArgs["port"], 10) : defaultConfig.port,
@@ -280,22 +363,39 @@ Options:
       cliArgs["start-remip-server"] ?? defaultConfig.startRemipServer,
   };
 
-  // 4. 必要であればReMIPサーバーを起動し、設定を動的に更新
+  // 5. Optionally start ReMIP server
   if (config.startRemipServer) {
     try {
       const remipInfo = await startReMIPServer();
-      // サーバーから取得した情報でホストとポートを上書き
       config.remipInfo = remipInfo;
-      console.log(
-        `ReMIP server started and is now targeted at http://${config.remipInfo.host}:${config.remipInfo.port}`
+      remipLog.info(
+        {
+          event: "subprocess_ready",
+          url: `http://${config.remipInfo.host}:${config.remipInfo.port}`,
+        },
+        "ReMIP server ready"
       );
-    } catch (error) {
-      console.error("Could not start ReMIP server:", error);
+    } catch (err) {
+      logger.fatal({event: "process_exit", err}, "Could not start ReMIP server.");
+      cleanupReMIPProcess();
+      logger.flush();
       process.exit(1);
     }
   }
 
-  console.log("Using configuration:", JSON.stringify(config));
+  // 6. 起動ログ（抜粋のみ）
+  logger.info(
+    {
+      event: "server_start",
+      http: config.http,
+      port: config.port,
+      remip_host: config.remipInfo.host,
+      remip_port: config.remipInfo.port,
+    },
+    "server starting"
+  );
+
+  // 7. Start transports/servers
   if (config.http) {
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
@@ -304,12 +404,13 @@ Options:
     setupAppServer(mcpServer, config.port, transport);
   } else {
     const transport = new StdioServerTransport();
-    setupMcpServer(transport, config.remipInfo);
+    await setupMcpServer(transport, config.remipInfo);
   }
 }
 
-// main関数を実行
-main().catch((error) => {
-  console.error("An unexpected error occurred in main:", error);
+// main
+main().catch((err) => {
+  logger.fatal({event: "exit", err}, "An unexpected error occurred in main");
+  logger.flush();
   process.exit(1);
 });
