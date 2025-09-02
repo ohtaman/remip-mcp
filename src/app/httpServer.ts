@@ -6,10 +6,15 @@ import { Logger } from "pino";
 import { randomUUID } from "crypto";
 
 export function setupAppServer(
-  mcpServer: McpServer,
   port: number,
-  transport: StreamableHTTPServerTransport,
-  logger: Logger
+  logger: Logger,
+  mcpSessionFactory: (
+    sessionIdGenerator: () => string,
+    onSessionClosed: (sessionId: string) => void
+  ) => Promise<{
+    transport: StreamableHTTPServerTransport;
+    mcpServer: McpServer;
+  }>
 ) {
   const app = express();
   app.use(express.json());
@@ -44,9 +49,92 @@ export function setupAppServer(
     res.status(200).end();
   });
 
+  const activeSessions = new Map<
+    string,
+    { transport: StreamableHTTPServerTransport; mcpServer: McpServer }
+  >();
+
+  const onSessionClosed = (sessionId: string) => {
+    activeSessions.delete(sessionId);
+    logger.info(
+      { event: "session_deleted", sessionId },
+      "Deleted session from active pool"
+    );
+  };
+
   app.post("/mcp", async (req, res) => {
     try {
-      await transport.handleRequest(req, res, req.body);
+      const sessionId = req.headers["mcp-session-id"] as string;
+      if (!sessionId) {
+        let generatedSessionId = "";
+        const sessionIdGenerator = () => {
+          const newId = randomUUID();
+          generatedSessionId = newId;
+          return newId;
+        };
+
+        const { transport, mcpServer } = await mcpSessionFactory(
+          sessionIdGenerator,
+          onSessionClosed
+        );
+        await transport.handleRequest(req, res, req.body);
+
+        if (generatedSessionId) {
+          activeSessions.set(generatedSessionId, { transport, mcpServer });
+        } else {
+          (req as any).log?.error("Failed to generate session ID");
+        }
+      } else {
+        const session = activeSessions.get(sessionId);
+        if (session) {
+          await session.transport.handleRequest(req, res, req.body);
+        } else {
+          res.status(404).json({
+            jsonrpc: "2.0",
+            error: { code: -32001, message: "Session not found" },
+            id: null,
+          });
+        }
+      }
+    } catch (err) {
+      (req as any).log?.error(
+        { event: "mcp_request_error", err },
+        "Error handling MCP request"
+      );
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: "2.0",
+          error: { code: -32603, message: "Internal server error" },
+          id: null,
+        });
+      }
+    }
+  });
+
+  app.delete("/mcp", async (req, res) => {
+    try {
+      const sessionId = req.headers["mcp-session-id"] as string;
+      if (sessionId) {
+        const session = activeSessions.get(sessionId);
+        if (session) {
+          await session.transport.handleRequest(req, res, req.body);
+        } else {
+          res.status(404).json({
+            jsonrpc: "2.0",
+            error: { code: -32001, message: "Session not found" },
+            id: null,
+          });
+        }
+      } else {
+        res.status(400).json({
+          jsonrpc: "2.0",
+          error: {
+            code: -32600,
+            message: "Invalid Request: Mcp-Session-Id header is required",
+          },
+          id: null,
+        });
+      }
     } catch (err) {
       (req as any).log?.error(
         { event: "mcp_request_error", err },

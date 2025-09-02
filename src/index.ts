@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+import path from 'node:path';
 // src/index.ts
 import { randomUUID } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -14,6 +16,8 @@ import { generateMipProblem } from './tools/generateMipProblem.js';
 import { solveMipProblem } from './tools/solveMipProblem.js';
 import { processMipSolution } from './tools/processMipSolution.js';
 import { z } from 'zod';
+
+const require = createRequire(import.meta.url);
 
 const generateMipProblemSchema = z.object({
   problemDefinitionCode: z.string(),
@@ -46,7 +50,8 @@ function installProcessHandlers() {
 
   process.on("unhandledRejection", (reason) => {
     cleanupReMIPProcess(logger);
-    logger.fatal({event: "process_exit", reason: reason}, "unhandledRejection");
+    const err = new Error(`Unhandled Rejection. Reason: ${reason}`);
+    logger.fatal({event: "process_exit", reason: reason, stack: err.stack}, "unhandledRejection");
     logger.flush();
     process.exit(1);
   });
@@ -113,13 +118,6 @@ async function setupMcpServer(
   );
   logger.info("Registered method: process_mip_solution");
 
-  mcpServer.on("session", (session) => {
-    if (session.status === "deleted") {
-      const deletedCount = storageService.clearSession(session.id);
-      logger.info({ event: "session_cleanup", sessionId: session.id, deletedKeys: deletedCount }, "Session data cleaned up.");
-    }
-  });
-
   await mcpServer.connect(transport);
   return mcpServer;
 }
@@ -150,14 +148,26 @@ async function main() {
   logger.info({ event: "server_start", config }, "Starting MCP Server.");
 
   const storageService = new StorageService();
-  const pyodideRunner = new PyodideRunner();
+  const pyodidePath = path.dirname(require.resolve("pyodide/package.json"));
+  const pyodideRunner = new PyodideRunner(pyodidePath, config.pyodidePackages);
 
   if (config.http) {
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: randomUUID,
-    });
-    const mcpServer = await setupMcpServer(transport, remipClient, storageService, pyodideRunner);
-    setupAppServer(mcpServer, config.port, transport, logger);
+    const mcpSessionFactory = async (
+      sessionIdGenerator: () => string,
+      onSessionClosed: (sessionId: string) => void
+    ) => {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator,
+        onsessionclosed: (sessionId: string) => {
+          onSessionClosed(sessionId);
+          storageService.clearSession(sessionId);
+          logger.info({ event: "session_closed", sessionId: sessionId }, "Session closed.");
+        },
+      });
+      const mcpServer = await setupMcpServer(transport, remipClient, storageService, pyodideRunner);
+      return { transport, mcpServer };
+    };
+    setupAppServer(config.port, logger, mcpSessionFactory);
   } else {
     const transport = new StdioServerTransport();
     await setupMcpServer(transport, remipClient, storageService, pyodideRunner);

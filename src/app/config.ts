@@ -17,6 +17,7 @@ export const defaultConfig = {
   startRemipServer: false,
   // path to the ReMIP Server to start.
   remipSourceURI: "git+https://github.com/ohtaman/remip.git#subdirectory=remip",
+  pyodidePackages: ["numpy", "pandas"],
 };
 
 export interface AppConfig {
@@ -28,6 +29,7 @@ export interface AppConfig {
   };
   startRemipServer: boolean;
   remipSourceURI: string;
+  pyodidePackages: string[];
 }
 
 export function processCommandOptions(): AppConfig {
@@ -38,6 +40,7 @@ export function processCommandOptions(): AppConfig {
     "remip-port": { type: "string" },
     "start-remip-server": { type: "boolean" },
     "remip-source-uri": { type: "string"},
+    "pyodide-packages": { type: "string", multiple: true },
     help: { type: "boolean", short: "h" },
   } as const;
 
@@ -59,6 +62,9 @@ Options:
   --remip-port <port>          Port of the ReMIP server to connect to. This option is ignored if --start-remip-server is specified. (Default: ${defaultConfig.remipServer.port})
   --start-remip-server         Start a local ReMIP server on launch (Default: ${defaultConfig.startRemipServer})
   --remip-source-uri           URL of the source code of the local ReMIP server to start (Default: ${defaultConfig.remipSourceURI})
+  --pyodide-packages <package> Packages to install in Pyodide. Can be specified multiple times. (Default: ${defaultConfig.pyodidePackages.join(
+    ", "
+  )})
   -h, --help                   Show this help message
 `.trimStart()
     );
@@ -77,6 +83,7 @@ Options:
     },
     startRemipServer: cliArgs["start-remip-server"] ?? defaultConfig.startRemipServer,
     remipSourceURI: cliArgs["remip-source-uri"] ?? defaultConfig.remipSourceURI,
+    pyodidePackages: cliArgs["pyodide-packages"] ?? defaultConfig.pyodidePackages,
   };
 
   return config;
