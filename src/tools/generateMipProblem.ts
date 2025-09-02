@@ -47,6 +47,20 @@ json.dumps(${problemName}.toDict())
 `);
   const problem = JSON.parse(problemDictString);
 
+  // Ensure all constraints have a name
+  if (problem.constraints) {
+    problem.constraints.forEach((constraint: { name?: string }, index: number) => {
+      if (!constraint.name) {
+        constraint.name = `constraint_${index}`;
+      }
+    });
+  }
+
+  // Ensure the objective has a name
+  if (problem.objective && !problem.objective.name) {
+    problem.objective.name = 'objective';
+  }
+
   const problemId = randomUUID();
   storageService.set(sessionId, problemId, problem);
 

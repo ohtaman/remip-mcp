@@ -148,7 +148,12 @@ async function main() {
   logger.info({ event: "server_start", config }, "Starting MCP Server.");
 
   const storageService = new StorageService();
-  const pyodidePath = path.dirname(require.resolve("pyodide/package.json"));
+  // In production, files are in `dist`, and we copy pyodide to `dist/pyodide`.
+  // In development, `ts-node` runs from the root, so we resolve from `node_modules`.
+  const isProd = !import.meta.url.startsWith('file://');
+  const pyodidePath = isProd
+    ? path.join(path.dirname(import.meta.url), 'pyodide')
+    : path.dirname(require.resolve("pyodide/package.json"));
   const pyodideRunner = new PyodideRunner(pyodidePath, config.pyodidePackages);
 
   if (config.http) {
