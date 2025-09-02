@@ -75,17 +75,36 @@ async function setupMcpServer(
       {
         name: "generate_mip_problem",
         description: "Generates a MIP problem from a Python script.",
-        inputSchema: generateMipProblemSchema,
+        inputSchema: {
+          type: "object",
+          properties: {
+            problemDefinitionCode: { type: "string" },
+          },
+          required: ["problemDefinitionCode"],
+        },
       },
       {
         name: "solve_mip_problem",
         description: "Solves a MIP problem.",
-        inputSchema: solveMipProblemSchema,
+        inputSchema: {
+          type: "object",
+          properties: {
+            problemId: { type: "string" },
+          },
+          required: ["problemId"],
+        },
       },
       {
         name: "validate_mip_solution",
         description: "Validates a MIP solution.",
-        inputSchema: validateMipSolutionSchema,
+        inputSchema: {
+          type: "object",
+          properties: {
+            solutionId: { type: "string" },
+            validationCode: { type: "string" },
+          },
+          required: ["solutionId", "validationCode"],
+        },
       },
     ],
   };
