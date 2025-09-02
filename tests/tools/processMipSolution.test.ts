@@ -1,12 +1,12 @@
 
-import { validateMipSolution } from '@tools/validateMipSolution';
+import { processMipSolution } from '../../src/tools/processMipSolution';
 import { PyodideRunner } from '@app/pyodideRunner';
 import { StorageService } from '@app/storage';
 
 jest.mock('@app/pyodideRunner');
 jest.mock('@app/storage');
 
-describe('validateMipSolution', () => {
+describe('processMipSolution', () => {
   let pyodideRunner: jest.Mocked<PyodideRunner>;
   let storageService: jest.Mocked<StorageService>;
 
@@ -34,7 +34,7 @@ describe('validateMipSolution', () => {
     };
     pyodideRunner.getPyodide.mockResolvedValue(mockPyodide as any);
 
-    const result = await validateMipSolution(sessionId, { solutionId, validationCode }, { pyodideRunner, storageService });
+    const result = await processMipSolution(sessionId, { solutionId, validationCode }, { pyodideRunner, storageService });
 
     expect(storageService.get).toHaveBeenCalledWith(sessionId, solutionId);
     expect(pyodideRunner.getPyodide).toHaveBeenCalledWith(sessionId);

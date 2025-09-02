@@ -2,7 +2,7 @@
 import { PyodideRunner } from '../app/pyodideRunner.js';
 import { StorageService } from '../app/storage.js';
 
-export async function validateMipSolution(
+export async function processMipSolution(
   sessionId: string,
   args: { solutionId: string, validationCode: string },
   services: { pyodideRunner: PyodideRunner, storageService: StorageService }

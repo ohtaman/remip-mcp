@@ -57,4 +57,25 @@ describe('StorageService', () => {
 
     expect(retrieved).toBeUndefined();
   });
+
+  it('should clear all data for a specific session', () => {
+    const sessionId1 = 'session1';
+    const sessionId2 = 'session2';
+
+    // Set data for two different sessions
+    storage.set(sessionId1, 'key1', 'value1');
+    storage.set(sessionId1, 'key2', 'value2');
+    storage.set(sessionId2, 'key1', 'value3');
+
+    // Clear session 1
+    const deletedCount = storage.clearSession(sessionId1);
+    expect(deletedCount).toBe(2);
+
+    // Check that session 1 data is gone
+    expect(storage.get(sessionId1, 'key1')).toBeUndefined();
+    expect(storage.get(sessionId1, 'key2')).toBeUndefined();
+
+    // Check that session 2 data is still there
+    expect(storage.get(sessionId2, 'key1')).toEqual('value3');
+  });
 });

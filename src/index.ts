@@ -1,6 +1,6 @@
 // src/index.ts
 import { randomUUID } from "crypto";
-import { Server as McpServer } from "@modelcontextprotocol/sdk/server";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { logger } from "./app/logger.js";
@@ -12,7 +12,7 @@ import { StorageService } from './app/storage.js';
 import { PyodideRunner } from './app/pyodideRunner.js';
 import { generateMipProblem } from './tools/generateMipProblem.js';
 import { solveMipProblem } from './tools/solveMipProblem.js';
-import { validateMipSolution } from './tools/validateMipSolution.js';
+import { processMipSolution } from './tools/processMipSolution.js';
 import { z } from 'zod';
 
 const generateMipProblemSchema = z.object({
@@ -23,7 +23,7 @@ const solveMipProblemSchema = z.object({
   problemId: z.string(),
 });
 
-const validateMipSolutionSchema = z.object({
+const processMipSolutionSchema = z.object({
   solutionId: z.string(),
   validationCode: z.string(),
 });
@@ -70,76 +70,55 @@ async function setupMcpServer(
     }
   );
 
-  const listToolsResult = {
-    tools: [
-      {
-        name: "generate_mip_problem",
-        description: "Generates a MIP problem from a Python script.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            problemDefinitionCode: { type: "string" },
-          },
-          required: ["problemDefinitionCode"],
-        },
-      },
-      {
-        name: "solve_mip_problem",
-        description: "Solves a MIP problem.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            problemId: { type: "string" },
-          },
-          required: ["problemId"],
-        },
-      },
-      {
-        name: "validate_mip_solution",
-        description: "Validates a MIP solution.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            solutionId: { type: "string" },
-            validationCode: { type: "string" },
-          },
-          required: ["solutionId", "validationCode"],
-        },
-      },
-    ],
-  };
 
-  mcpServer.setRequestHandler(
-    z.object({ method: z.literal("tools/list") }),
-    () => listToolsResult
-  );
-
-  mcpServer.setRequestHandler(
-    z.object({ method: z.literal("tool/run"), params: z.object({ name: z.literal("generate_mip_problem") }).passthrough() }),
-    async (req: any, extra: any) => {
-      const parsed = generateMipProblemSchema.parse(req.params.parameters);
+  mcpServer.registerTool(
+    "generate_mip_problem",
+    {
+      description: "Generates a MIP problem from a Python script.",
+      inputSchema: generateMipProblemSchema.shape,
+    },
+    async (params: any, extra: any) => {
       const sessionId = extra.sessionId!;
-      return await generateMipProblem(sessionId, parsed, { pyodideRunner, storageService });
-    }
+      const result = await generateMipProblem(sessionId, params, { pyodideRunner, storageService });
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    },
   );
+  logger.info("Registered method: generate_mip_problem");
 
-  mcpServer.setRequestHandler(
-    z.object({ method: z.literal("tool/run"), params: z.object({ name: z.literal("solve_mip_problem") }).passthrough() }),
-    async (req: any, extra: any) => {
-      const parsed = solveMipProblemSchema.parse(req.params.parameters);
+  mcpServer.registerTool(
+    "solve_mip_problem",
+    {
+      description: "Solves a MIP problem.",
+      inputSchema: solveMipProblemSchema.shape,
+    },
+    async (params: any, extra: any) => {
       const sessionId = extra.sessionId!;
-      return await solveMipProblem(sessionId, parsed, { storageService, remipClient });
-    }
+      const result = await solveMipProblem(sessionId, params, { storageService, remipClient });
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    },
   );
+  logger.info("Registered method: solve_mip_problem");
 
-  mcpServer.setRequestHandler(
-    z.object({ method: z.literal("tool/run"), params: z.object({ name: z.literal("validate_mip_solution") }).passthrough() }),
-    async (req: any, extra: any) => {
-      const parsed = validateMipSolutionSchema.parse(req.params.parameters);
+  mcpServer.registerTool(
+    "process_mip_solution",
+    {
+      description: "Processes a MIP solution using a Python script for validation, formatting, or other analysis.",
+      inputSchema: processMipSolutionSchema.shape,
+    },
+    async (params: any, extra: any) => {
       const sessionId = extra.sessionId!;
-      return await validateMipSolution(sessionId, parsed, { pyodideRunner, storageService });
-    }
+      const result = await processMipSolution(sessionId, params, { pyodideRunner, storageService });
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    },
   );
+  logger.info("Registered method: process_mip_solution");
+
+  mcpServer.on("session", (session) => {
+    if (session.status === "deleted") {
+      const deletedCount = storageService.clearSession(session.id);
+      logger.info({ event: "session_cleanup", sessionId: session.id, deletedKeys: deletedCount }, "Session data cleaned up.");
+    }
+  });
 
   await mcpServer.connect(transport);
   return mcpServer;

@@ -23,4 +23,12 @@ export class StorageService {
   public delete(sessionId: string, key: string): void {
     this.cache.del(this.getKey(sessionId, key));
   }
+
+  public clearSession(sessionId: string): number {
+    const keysToDelete = this.cache.keys().filter(key => key.startsWith(`${sessionId}:`));
+    if (keysToDelete.length > 0) {
+      return this.cache.del(keysToDelete);
+    }
+    return 0;
+  }
 }
