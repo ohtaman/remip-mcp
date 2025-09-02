@@ -79,7 +79,7 @@ async function setupMcpServer(
   mcpServer.registerTool(
     "generate_mip_problem",
     {
-      description: "Generates a MIP problem from a Python script.",
+      description: "Generates a Mixed-Integer Programming (MIP) problem definition from a Python script using the PuLP library. This tool executes the provided Python code in a Pyodide environment to define a PuLP LpProblem object. The resulting problem is then serialized and stored, returning a unique problem ID for future reference.",
       inputSchema: generateMipProblemSchema.shape,
     },
     async (params: any, extra: any) => {
@@ -93,7 +93,7 @@ async function setupMcpServer(
   mcpServer.registerTool(
     "solve_mip_problem",
     {
-      description: "Solves a MIP problem.",
+      description: "Solves a previously generated Mixed-Integer Programming (MIP) problem. It retrieves the problem definition using the provided problem ID and submits it to a ReMIP (Remote MIP) solver. The tool streams logs and metrics from the solver and returns the final solution along with a unique solution ID.",
       inputSchema: solveMipProblemSchema.shape,
     },
     async (params: any, extra: any) => {
@@ -107,7 +107,7 @@ async function setupMcpServer(
   mcpServer.registerTool(
     "process_mip_solution",
     {
-      description: "Processes a MIP solution using a Python script for validation, formatting, or other analysis.",
+      description: "Processes a MIP solution using a Python script for validation, formatting, or other analysis. This tool retrieves a stored solution by its ID and executes the provided Python code in a Pyodide environment. The solution object is available in the Python script's global scope, allowing for custom validation and post-processing.",
       inputSchema: processMipSolutionSchema.shape,
     },
     async (params: any, extra: any) => {
