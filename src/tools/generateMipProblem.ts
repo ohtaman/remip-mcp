@@ -7,14 +7,25 @@ export async function generateMipProblem(
   sessionId: string,
   args: { problemDefinitionCode: string },
   services: { pyodideRunner: PyodideRunner, storageService: StorageService }
-): Promise<{ problemId: string }> {
+): Promise<{ problemId: string, stdout: string, stderr: string }> {
   const { pyodideRunner, storageService } = services;
   const pyodide = await pyodideRunner.getPyodide(sessionId);
+
+  // Initial output before execution
+  let allStdout = '';
+  let allStderr = '';
+
   await pyodide.loadPackage('micropip');
   const micropip = pyodide.pyimport('micropip');
   await micropip.install('pulp');
+  let output = pyodideRunner.getOutput(sessionId);
+  allStdout += output.stdout;
+  allStderr += output.stderr;
 
   pyodide.runPython(args.problemDefinitionCode);
+  output = pyodideRunner.getOutput(sessionId);
+  allStdout += output.stdout;
+  allStderr += output.stderr;
 
   const problemFinderScript = `
 import pulp
@@ -24,9 +35,12 @@ __problem_names__ = [
 ]
   `;
   pyodide.runPython(problemFinderScript);
+  output = pyodideRunner.getOutput(sessionId);
+  allStdout += output.stdout;
+  allStderr += output.stderr;
+
   const problemNamesProxy = pyodide.globals.get('__problem_names__');
   if (problemNamesProxy === undefined) {
-    // This should not happen
     throw new Error("Could not execute the LpProblem finder script.");
   }
   const problemNames = problemNamesProxy.toJs();
@@ -45,6 +59,10 @@ __problem_names__ = [
 import json
 json.dumps(${problemName}.toDict())
 `);
+  output = pyodideRunner.getOutput(sessionId);
+  allStdout += output.stdout;
+  allStderr += output.stderr;
+
   const problem = JSON.parse(problemDictString);
 
   // Ensure all constraints have a name
@@ -64,5 +82,5 @@ json.dumps(${problemName}.toDict())
   const problemId = randomUUID();
   storageService.set(sessionId, problemId, problem);
 
-  return { problemId };
+  return { problemId, stdout: allStdout, stderr: allStderr };
 }

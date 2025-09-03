@@ -6,7 +6,7 @@ export async function processMipSolution(
   sessionId: string,
   args: { solutionId: string, validationCode: string },
   services: { pyodideRunner: PyodideRunner, storageService: StorageService }
-): Promise<{ status: string, message: string }> {
+): Promise<{ status: string, message: string, stdout: string, stderr: string }> {
   const { pyodideRunner, storageService } = services;
   const solution = storageService.get(sessionId, args.solutionId);
   if (!solution) {
@@ -14,8 +14,10 @@ export async function processMipSolution(
   }
 
   const pyodide = await pyodideRunner.getPyodide(sessionId);
-  pyodide.globals.set('solution', solution);
+  pyodide.globals.set('solution', pyodide.toPy(solution));
   await pyodide.runPython(args.validationCode);
 
-  return { status: 'success', message: 'Validation successful' };
+  const { stdout, stderr } = pyodideRunner.getOutput(sessionId);
+
+  return { status: 'success', message: 'Validation successful', stdout, stderr };
 }
