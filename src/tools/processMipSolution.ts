@@ -14,7 +14,7 @@ export async function processMipSolution(
   }
 
   const pyodide = await pyodideRunner.getPyodide(sessionId);
-  pyodide.globals.set('solution', solution);
+  pyodide.globals.set('solution', pyodide.toPy(solution));
   await pyodide.runPython(args.validationCode);
 
   const { stdout, stderr } = pyodideRunner.getOutput(sessionId);

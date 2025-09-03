@@ -5,10 +5,13 @@
   "license": "Apache-2.0",
   "author": "ohtamans@gmail.com",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "bin": {
-    "remip-mcp": "dist/index.js"
+    "remip-mcp": "src/index.ts"
   },
+  "files": [
+    "src"
+  ],
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node dist/index.js",
@@ -24,7 +27,6 @@
     "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.20.4",
     "typescript": "^5.9.2"
   },
   "dependencies": {
@@ -34,6 +36,7 @@
     "node-cache": "^5.1.2",
     "pino": "^9.9.0",
     "pyodide": "^0.28.2",
+    "tsx": "^4.20.4",
     "zod": "^3.25.76"
   }
 }
