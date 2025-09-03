@@ -22,6 +22,7 @@ describe('processMipSolution', () => {
     const solution = { objectiveValue: 123, variableValues: { 'x': 1 } };
 
     storageService.get.mockReturnValue(solution);
+    (pyodideRunner.getOutput as jest.Mock).mockReturnValue({ stdout: 'mock stdout', stderr: 'mock stderr' });
 
     const mockPyodide = {
       runPython: jest.fn().mockReturnValue(undefined),
@@ -40,6 +41,6 @@ describe('processMipSolution', () => {
     expect(pyodideRunner.getPyodide).toHaveBeenCalledWith(sessionId);
     expect(mockPyodide.globals.set).toHaveBeenCalledWith('solution', solution);
     expect(mockPyodide.runPython).toHaveBeenCalledWith(validationCode);
-    expect(result).toEqual({ status: 'success', message: 'Validation successful' });
+    expect(result).toEqual({ status: 'success', message: 'Validation successful', stdout: 'mock stdout', stderr: 'mock stderr' });
   });
 });

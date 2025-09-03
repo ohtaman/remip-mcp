@@ -28,6 +28,7 @@ describe('generateMipProblem', () => {
       },
     };
     pyodideRunner.getPyodide.mockResolvedValue(mockPyodide);
+    (pyodideRunner.getOutput as jest.Mock).mockReturnValue({ stdout: '', stderr: '' });
   });
 
   it('should find one LpProblem, serialize it, store it, and return a problemId', async () => {
@@ -61,6 +62,8 @@ describe('generateMipProblem', () => {
     expect(storageService.set).toHaveBeenCalledWith(sessionId, expect.any(String), expectedProblemDictInStorage);
     expect(result).toHaveProperty('problemId');
     expect(typeof result.problemId).toBe('string');
+    expect(result).toHaveProperty('stdout');
+    expect(result).toHaveProperty('stderr');
   });
 
   it('should throw an error if no LpProblem instance is found', async () => {
