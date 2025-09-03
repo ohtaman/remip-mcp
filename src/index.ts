@@ -1,119 +1,191 @@
-import { parseArgs } from "node:util";
-import express from "express";
-import { spawn } from 'child_process';
-// ステップ2で作成した設定ファイルをインポート
-import { defaultConfig } from './config.js';
+#!/usr/bin/env node
+import { createRequire } from 'node:module';
+import path from 'node:path';
+// src/index.ts
+import { randomUUID } from "crypto";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { logger } from "./app/logger.js";
+import { AppConfig, processCommandOptions } from "./app/config.js";
+import { startReMIPServer, cleanupReMIPProcess, ReMIPInfo } from "./app/remipProcess.js";
+import { setupAppServer } from "./app/httpServer.js";
+import { ReMIPClient } from "./connectors/remip/ReMIPClient.js";
+import { StorageService } from './app/storage.js';
+import { PyodideRunner } from './app/pyodideRunner.js';
+import { generateMipProblem } from './tools/generateMipProblem.js';
+import { solveMipProblem } from './tools/solveMipProblem.js';
+import { processMipSolution } from './tools/processMipSolution.js';
+import { z } from 'zod';
 
-interface ReMIPInfoSchema {
-    host: string;
-    port: number;
-}
+const require = createRequire(import.meta.url);
 
-function startReMIPServer(): Promise<ReMIPInfoSchema> {
-    return new Promise((resolve, reject) => {
-        const command = "uvx";
-        const args = ["--from=git+https://github.com/ohtaman/remip.git#subdirectory=remip", "remip"];
-        console.log(`Executing: ${command} ${args.join(' ')}`);
+const generateMipProblemSchema = z.object({
+  problemDefinitionCode: z.string(),
+});
 
-        const remipProcess = spawn(command, args);
+const solveMipProblemSchema = z.object({
+  problemId: z.string(),
+});
 
-        remipProcess.stdout?.on("data", (data) => {
-            console.error(`[ReMIP Server]: ${data.toString()}`);
-        });
+const processMipSolutionSchema = z.object({
+  solutionId: z.string(),
+  validationCode: z.string(),
+});
 
-        remipProcess.stderr?.on("data", (data) => {
-            const output = data.toString();
-            console.log(`[ReMIP Server]: ${output}`); // ログを出力
-            const match = output.match(/running on http:\/\/(\S+):(\d+)/);
-            if (match && match[1] && match[2]) {
-                resolve({ host: match[1], port: parseInt(match[2], 10) });
-            }
-        });
-
-        remipProcess.on('close', (code) => {
-            if (code !== 0) {
-                reject(new Error(`ReMIP server process exited with code ${code}`));
-            }
-        });
+function installProcessHandlers() {
+  (["SIGINT", "SIGTERM", "SIGHUP"] as NodeJS.Signals[]).forEach((sig) => {
+    process.on(sig, () => {
+      cleanupReMIPProcess(logger);
+      logger.info({event: "process_exit"}, sig);
+      process.exit(0);
     });
+  });
+
+  process.on("uncaughtException", (err: any) => {
+    cleanupReMIPProcess(logger);
+    logger.fatal({event: "process_exit", err}, "uncaughtException");
+    logger.flush();
+    process.exit(1);
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    cleanupReMIPProcess(logger);
+    const err = new Error(`Unhandled Rejection. Reason: ${reason}`);
+    logger.fatal({event: "process_exit", reason: reason, stack: err.stack}, "unhandledRejection");
+    logger.flush();
+    process.exit(1);
+  });
 }
 
+async function setupMcpServer(
+  transport: StreamableHTTPServerTransport | StdioServerTransport,
+  remipClient: ReMIPClient,
+  storageService: StorageService,
+  pyodideRunner: PyodideRunner
+): Promise<any> {
+  const mcpServer = new McpServer(
+    {
+      name: "remip-mcp",
+      version: "0.1.0",
+    },
+    {
+      capabilities: {
+        tools: {},
+      },
+    }
+  );
+
+
+  mcpServer.registerTool(
+    "generate_mip_problem",
+    {
+      description: "Generates a Mixed-Integer Programming (MIP) problem definition from a Python script using the PuLP library. This tool executes the provided Python code in a Pyodide environment to define a PuLP LpProblem object. The resulting problem is then serialized and stored, returning a unique problem ID for future reference.",
+      inputSchema: generateMipProblemSchema.shape,
+    },
+    async (params: any, extra: any) => {
+      const sessionId = extra.sessionId!;
+      const result = await generateMipProblem(sessionId, params, { pyodideRunner, storageService });
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    },
+  );
+  logger.info("Registered method: generate_mip_problem");
+
+  mcpServer.registerTool(
+    "solve_mip_problem",
+    {
+      description: "Solves a previously generated Mixed-Integer Programming (MIP) problem. It retrieves the problem definition using the provided problem ID and submits it to a ReMIP (Remote MIP) solver. The tool streams logs and metrics from the solver and returns the final solution along with a unique solution ID.",
+      inputSchema: solveMipProblemSchema.shape,
+    },
+    async (params: any, extra: any) => {
+      const sessionId = extra.sessionId!;
+      const result = await solveMipProblem(sessionId, params, { storageService, remipClient });
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    },
+  );
+  logger.info("Registered method: solve_mip_problem");
+
+  mcpServer.registerTool(
+    "process_mip_solution",
+    {
+      description: "Processes a MIP solution using a Python script for validation, formatting, or other analysis. This tool retrieves a stored solution by its ID and executes the provided Python code in a Pyodide environment. The solution object is available in the Python script's global scope, allowing for custom validation and post-processing.",
+      inputSchema: processMipSolutionSchema.shape,
+    },
+    async (params: any, extra: any) => {
+      const sessionId = extra.sessionId!;
+      const result = await processMipSolution(sessionId, params, { pyodideRunner, storageService });
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    },
+  );
+  logger.info("Registered method: process_mip_solution");
+
+  await mcpServer.connect(transport);
+  return mcpServer;
+}
 
 async function main() {
-    // 1. コマンドラインオプションを定義 (config.tsのキーと対応させる)
-    const options = {
-        'port': { type: 'string' },
-        'remip-host': { type: 'string' },
-        'remip-port': { type: 'string' },
-        'start-remip-server': { type: 'boolean' },
-        'help': { type: 'boolean', short: 'h' }
-    } as const;
+  const config = processCommandOptions();
+  installProcessHandlers();
 
-    // 2. コマンドライン引数をパース
-    const { values: cliArgs } = parseArgs({
-        allowPositionals: false,
-        args: process.argv.slice(2),
-        options: options,
-    });
-
-    // ヘルプオプションが指定された場合は使い方を表示して終了
-    if (cliArgs.help) {
-        console.log(`
-Usage: node index.js [options]
-
-Options:
-  --port <port>           Port for this application server (Default: ${defaultConfig.port})
-  --remip-host <host>         Hostname of the ReMIP server (Default: ${defaultConfig.remipServer.host})
-  --remip-port <port>         Port of the ReMIP server (Default: ${defaultConfig.remipServer.port})
-  --start-remip-server        Start a local ReMIP server on launch (Default: ${defaultConfig.startRemipServer})
-  -h, --help                  Show this help message
-`);
-        return;
+  let remipInfo: ReMIPInfo = config.remipInfo;
+  if (config.startRemipServer) {
+    try {
+      remipInfo = await startReMIPServer(config.remipSourceURI, logger);
+      config.remipInfo = remipInfo;
+      logger.info({ event: "subprocess_ready", url: `http://${remipInfo.host}:${remipInfo.port}` }, "ReMIP server ready");
+    } catch (err) {
+      logger.fatal({ event: "process_exit", err }, "Could not start ReMIP server.");
+      cleanupReMIPProcess(logger);
+      logger.flush();
+      process.exit(1);
     }
+  }
 
-    // 3. 設定のマージ (デフォルト設定をコマンドライン引数で上書き)
-    const finalConfig = {
-        appPort: cliArgs['port'] ? parseInt(cliArgs['port'], 10) : defaultConfig.port,
-        remipHost: cliArgs['remip-host'] ?? defaultConfig.remipServer.host,
-        remipPort: cliArgs['remip-port'] ? parseInt(cliArgs['remip-port'], 10) : defaultConfig.remipServer.port,
-        startRemipServer: cliArgs['start-remip-server'] ?? defaultConfig.startRemipServer,
+  const remipClient = new ReMIPClient({
+      logger: logger.child({ service: "ReMIPClient" }),
+      baseUrl: `http://${remipInfo.host}:${remipInfo.port}`,
+  });
+
+  logger.info({ event: "server_start", config }, "Starting MCP Server.");
+
+  const storageService = new StorageService();
+  // In production, files are in `dist`, and we copy pyodide to `dist/pyodide`.
+  // In development, `ts-node` runs from the root, so we resolve from `node_modules`.
+  const isProd = !import.meta.url.startsWith('file://');
+  const pyodidePath = isProd
+    ? path.join(path.dirname(import.meta.url), 'pyodide')
+    : path.dirname(require.resolve("pyodide/package.json"));
+  const pyodideRunner = new PyodideRunner(pyodidePath, config.pyodidePackages);
+
+  if (config.http) {
+    const mcpSessionFactory = async (
+      sessionIdGenerator: () => string,
+      onSessionClosed: (sessionId: string) => void
+    ) => {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator,
+        onsessionclosed: (sessionId: string) => {
+          onSessionClosed(sessionId);
+          storageService.clearSession(sessionId);
+          logger.info({ event: "session_closed", sessionId: sessionId }, "Session closed.");
+        },
+      });
+      const mcpServer = await setupMcpServer(transport, remipClient, storageService, pyodideRunner);
+      return { transport, mcpServer };
     };
-
-    // 4. 必要であればReMIPサーバーを起動し、設定を動的に更新
-    if (finalConfig.startRemipServer) {
-        try {
-            const remipInfo = await startReMIPServer();
-            // サーバーから取得した情報でホストとポートを上書き
-            finalConfig.remipHost = remipInfo.host;
-            finalConfig.remipPort = remipInfo.port;
-            console.log(`ReMIP server started and is now targeted at http://${finalConfig.remipHost}:${finalConfig.remipPort}`);
-        } catch (error) {
-            console.error("Could not start ReMIP server:", error);
-            process.exit(1);
-        }
-    }
-
-    console.log("Using final configuration:", finalConfig);
-
-    // 5. 確定した設定値を使ってExpressサーバーを起動
-    const app = express();
-    app.use(express.json());
-
-    app.get("/health", async (req, res) => {
-        console.log("Health check successful");
-        res.json({ 
-            status: "ok",
-            remipTarget: `http://${finalConfig.remipHost}:${finalConfig.remipPort}`
-        });
+    setupAppServer(config.port, logger, mcpSessionFactory);
+  } else {
+    const transport = new StdioServerTransport();
+    await setupMcpServer(transport, remipClient, storageService, pyodideRunner);
+    process.stdin.on('close', () => {
+      logger.info({ event: 'stdin_closed' }, 'STDIN closed, shutting down.');
+      process.exit(0);
     });
-
-    app.listen(finalConfig.appPort, () => {
-        console.log(`Application server listening at http://localhost:${finalConfig.appPort}`);
-    });
+  }
 }
 
-// main関数を実行
-main().catch(error => {
-    console.error("An unexpected error occurred in main:", error);
-    process.exit(1);
+main().catch((err) => {
+  logger.fatal({ event: "exit", err }, "An unexpected error occurred in main");
+  logger.flush();
+  process.exit(1);
 });

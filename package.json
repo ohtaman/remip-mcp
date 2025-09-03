@@ -6,24 +6,34 @@
   "author": "ohtamans@gmail.com",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "remip-mcp": "dist/index.js"
+  },
   "scripts": {
-    "test": "jest",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node dist/index.js",
-    "dev": "node --loader ts-node/esm src/index.ts",
-    "build": "tsc"
+    "dev": "node --import tsx src/index.ts",
+    "build": "tsc && shx cp -r node_modules/pyodide/ dist/pyodide"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
+    "@types/node": "^24.3.0",
     "jest": "^30.0.5",
+    "pino-pretty": "^13.1.1",
+    "shx": "^0.4.0",
     "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.4",
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.3",
+    "@modelcontextprotocol/sdk": "^1.17.4",
     "@types/express": "^5.0.3",
     "express": "^5.1.0",
-    "pyodide": "^0.28.1"
+    "node-cache": "^5.1.2",
+    "pino": "^9.9.0",
+    "pyodide": "^0.28.2",
+    "zod": "^3.25.76"
   }
 }

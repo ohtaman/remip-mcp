@@ -12,10 +12,21 @@
         "types": [
             "jest",
             "node"
-        ]
+        ],
+        "baseUrl": ".",
+        "paths": {
+            "@app/*": ["src/app/*"],
+            "@connectors/*": ["src/connectors/*"],
+            "@schemas/*": ["src/schemas/*"],
+            "@tools/*": ["src/tools/*"],
+            "@utils/*": ["src/utils/*"]
+        }
     },
     "include": [
-        "src",
-        "**/*.test.ts"
+        "src"
+    ],
+    "exclude": [
+        "node_modules",
+        "tests"
     ]
 }
