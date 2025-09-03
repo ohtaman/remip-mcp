@@ -22,7 +22,11 @@ export const logger: Logger = pino({
       ? undefined
       : {
           target: "pino-pretty",
-          options: { translateTime: "SYS:standard", singleLine: true },
+          options: {
+            translateTime: "SYS:standard",
+            singleLine: true,
+            destination: 2, // stderr
+          },
         },
 });
 
