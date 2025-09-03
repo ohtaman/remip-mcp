@@ -18,6 +18,8 @@ export class PyodideRunner {
 
     const pyodide = await loadPyodide({
       indexURL: this.indexURL,
+      stdout: () => {},
+      stderr: () => {},
     });
     if (this.packages.length > 0) {
       await pyodide.loadPackage(this.packages);

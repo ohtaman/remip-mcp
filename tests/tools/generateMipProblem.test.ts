@@ -15,7 +15,7 @@ describe('generateMipProblem', () => {
     // Reset mocks before each test
     jest.clearAllMocks();
 
-    pyodideRunner = new PyodideRunner() as jest.Mocked<PyodideRunner>;
+    pyodideRunner = new PyodideRunner('dummy-url') as jest.Mocked<PyodideRunner>;
     storageService = new StorageService() as jest.Mocked<StorageService>;
 
     // Mock the Pyodide instance and its methods
@@ -33,7 +33,8 @@ describe('generateMipProblem', () => {
   it('should find one LpProblem, serialize it, store it, and return a problemId', async () => {
     const sessionId = 'session-123';
     const problemDefinitionCode = 'import pulp; my_problem = pulp.LpProblem("TestProblem")';
-    const problemDict = { objective: {}, constraints: [], variables: [], parameters: {} };
+    const problemDictFromPyodide = { objective: {}, constraints: [], variables: [], parameters: {} };
+    const expectedProblemDictInStorage = { objective: { name: 'objective' }, constraints: [], variables: [], parameters: {} };
 
     // Simulate the script execution and problem finding
     mockPyodide.runPython.mockImplementation((script: string) => {
@@ -46,7 +47,7 @@ describe('generateMipProblem', () => {
         mockPyodide.globals.get.mockReturnValueOnce(problemNamesProxy);
       } else if (script.includes('json.dumps')) {
         // This is the serialization script
-        return JSON.stringify(problemDict);
+        return JSON.stringify(problemDictFromPyodide);
       }
     });
 
@@ -57,7 +58,7 @@ describe('generateMipProblem', () => {
     expect(mockPyodide.runPython).toHaveBeenCalledWith(problemDefinitionCode);
     expect(mockPyodide.runPython).toHaveBeenCalledWith(expect.stringContaining('isinstance(var, pulp.LpProblem)'));
     expect(mockPyodide.runPython).toHaveBeenCalledWith(expect.stringContaining('json.dumps(my_problem.toDict())'));
-    expect(storageService.set).toHaveBeenCalledWith(sessionId, expect.any(String), problemDict);
+    expect(storageService.set).toHaveBeenCalledWith(sessionId, expect.any(String), expectedProblemDictInStorage);
     expect(result).toHaveProperty('problemId');
     expect(typeof result.problemId).toBe('string');
   });

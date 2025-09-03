@@ -5,7 +5,7 @@ describe('PyodideRunner', () => {
   let runner: PyodideRunner;
 
   beforeEach(() => {
-    runner = new PyodideRunner();
+    runner = new PyodideRunner('dummy-url');
   });
 
   it('should get a pyodide instance for a session', async () => {

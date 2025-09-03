@@ -87,6 +87,13 @@ export function setupAppServer(
       } else {
         const session = activeSessions.get(sessionId);
         if (session) {
+          res.on("close", () => {
+            logger.info(
+              { event: "sse_connection_closed", sessionId },
+              "SSE connection closed, cleaning up session"
+            );
+            onSessionClosed(sessionId);
+          });
           await session.transport.handleRequest(req, res, req.body);
         } else {
           res.status(404).json({

@@ -1,4 +1,3 @@
-
 import type { Config } from 'jest';
 
 const config: Config = {
@@ -21,6 +20,7 @@ const config: Config = {
     '^@tools/(.*)$': '<rootDir>/src/tools/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1'
   },
+  modulePathIgnorePatterns: ['<rootDir>/dist/'],
 };
 
 export default config;

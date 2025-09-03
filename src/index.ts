@@ -177,6 +177,10 @@ async function main() {
   } else {
     const transport = new StdioServerTransport();
     await setupMcpServer(transport, remipClient, storageService, pyodideRunner);
+    process.stdin.on('close', () => {
+      logger.info({ event: 'stdin_closed' }, 'STDIN closed, shutting down.');
+      process.exit(0);
+    });
   }
 }
 

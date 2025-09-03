@@ -11,7 +11,7 @@ describe('processMipSolution', () => {
   let storageService: jest.Mocked<StorageService>;
 
   beforeEach(() => {
-    pyodideRunner = new PyodideRunner() as jest.Mocked<PyodideRunner>;
+    pyodideRunner = new PyodideRunner('dummy-url') as jest.Mocked<PyodideRunner>;
     storageService = new StorageService() as jest.Mocked<StorageService>;
   });
 
