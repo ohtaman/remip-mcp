@@ -1,10 +1,9 @@
-
 import { loadPyodide, PyodideInterface } from 'pyodide';
 
 export interface PyodideExecutionResult {
   stdout: string;
   stderr: string;
-  result: any;
+  result: unknown;
 }
 
 interface PyodideInstance {
@@ -49,7 +48,10 @@ export class PyodideRunner {
     if (!instance) {
       return { stdout: '', stderr: '' };
     }
-    const result = { stdout: instance.stdout.join('\n'), stderr: instance.stderr.join('\n') };
+    const result = {
+      stdout: instance.stdout.join('\n'),
+      stderr: instance.stderr.join('\n'),
+    };
     // Clear buffers after getting the output
     instance.stdout.length = 0;
     instance.stderr.length = 0;

@@ -1,15 +1,20 @@
-import { LpStatus, Solution } from "../../schemas/solutions.js";
-import type { Problem, LogData, MetricData, ReMIPClientOptions, Logger } from './types.js';
-
+import { Solution } from '../../schemas/solutions.js';
+import type {
+  Problem,
+  LogData,
+  MetricData,
+  ReMIPClientOptions,
+  Logger,
+} from './types.js';
 
 /**
  * A client for connecting to and interacting with the ReMIP (Remote MIP) Server API.
  * It can handle both standard JSON and streaming (Server-Sent Events) responses.
  */
 export class ReMIPClient {
-    private readonly baseUrl: string;
-    private readonly stream: boolean;
-    private readonly logger: Logger;
+  private readonly baseUrl: string;
+  private readonly stream: boolean;
+  private readonly logger: Logger;
 
   /**
    * Constructs an instance of the ReMIPClient.
@@ -40,7 +45,7 @@ export class ReMIPClient {
     } catch (error) {
       this.logger.error(
         { err: error },
-        '[ReMIPClient] Fatal error during API call'
+        '[ReMIPClient] Fatal error during API call',
       );
       return null;
     }
@@ -59,10 +64,12 @@ export class ReMIPClient {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+      throw new Error(
+        `API request failed with status ${response.status}: ${errorBody}`,
+      );
     }
 
-    return await response.json() as Solution;
+    return (await response.json()) as Solution;
   }
 
   /**
@@ -79,7 +86,9 @@ export class ReMIPClient {
 
     if (!response.ok || !response.body) {
       const errorBody = await response.text();
-      throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
+      throw new Error(
+        `API request failed with status ${response.status}: ${errorBody}`,
+      );
     }
 
     let solution: Solution | null = null;
@@ -98,7 +107,8 @@ export class ReMIPClient {
       buffer = lines.pop() || ''; // Keep the last, potentially incomplete, line
 
       for (const line of lines) {
-        if (!line.trim()) { // An empty line signals the end of an event block
+        if (!line.trim()) {
+          // An empty line signals the end of an event block
           currentEvent = null;
           continue;
         }
@@ -117,29 +127,38 @@ export class ReMIPClient {
                 // The result can be the data object itself or nested in a 'solution' field
                 solution = 'solution' in data ? data.solution : data;
                 break;
-              case 'log':
+              case 'log': {
                 const logData = data as LogData;
-                this.logger.info(`[ReMIP Log][${logData.timestamp}] ${logData.message}`);
-                break;
-              case 'metric':
-                const metricData = data as MetricData;
                 this.logger.info(
-                  `[ReMIP Metric][${metricData.timestamp}] Iter: ${metricData.iteration}, Obj: ${metricData.objective_value}, Gap: ${metricData.gap}`
+                  `[ReMIP Log][${logData.timestamp}] ${logData.message}`,
                 );
                 break;
+              }
+              case 'metric': {
+                const metricData = data as MetricData;
+                this.logger.info(
+                  `[ReMIP Metric][${metricData.timestamp}] Iter: ${metricData.iteration}, Obj: ${metricData.objective_value}, Gap: ${metricData.gap}`,
+                );
+                break;
+              }
               default:
                 // Silently ignore unknown event types
                 break;
             }
           } catch (e) {
-             console.warn(`[ReMIPClient] Failed to parse JSON data from SSE stream: "${dataStr}"`, e);
+            console.warn(
+              `[ReMIPClient] Failed to parse JSON data from SSE stream: "${dataStr}"`,
+              e,
+            );
           }
         }
       }
     }
 
     if (!solution) {
-      console.warn("[ReMIPClient] Stream ended but did not receive a final solution from the server.");
+      console.warn(
+        '[ReMIPClient] Stream ended but did not receive a final solution from the server.',
+      );
     }
 
     return solution;
