@@ -26,7 +26,7 @@ The server is built with Node.js and uses a technology called **Pyodide** to saf
 graph TD
     A[User/Client] --> B{Call generate_mip_problem};
     B --> C[remip-mcp Server];
-    C --> D[Pyodide (runs Python code)];
+    C --> D[Pyodide ("runs Python code")];
     D --> E[Problem File (.lp)];
     E --> F{Call solve_mip_problem};
     F --> C;
@@ -37,7 +37,7 @@ graph TD
     H --> A;
     A --> I{Call process_mip_solution};
     I --> C;
-    C --> J[Pyodide (processes solution)];
+    C --> J[Pyodide ("processes solution")];
     J --> K[Processed Result];
     K --> A;
 ```
