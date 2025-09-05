@@ -22,6 +22,28 @@ This server provides three main tools:
 
 The server is built with Node.js and uses a technology called **Pyodide** to safely run your Python code without you needing to install Python yourself.
 
+```mermaid
+graph TD
+    A[User/Client] --> B{Call generate_mip_problem};
+    B --> C[remip-mcp Server];
+    C --> D[Pyodide (runs Python code)];
+    D --> E[Problem File (.lp)];
+    E --> F{Call solve_mip_problem};
+    F --> C;
+    C --> G[ReMIP Solver];
+    G -- Stream Logs/Metrics --> C;
+    G -- Solution --> C;
+    C --> H[Return Solution];
+    H --> A;
+    A --> I{Call process_mip_solution};
+    I --> C;
+    C --> J[Pyodide (processes solution)];
+    J --> K[Processed Result];
+    K --> A;
+```
+
+Here's a step-by-step breakdown of the process:
+
 1.  You call the `generate_mip_problem` tool with your optimization model written in Python.
 2.  The server runs your code and creates a problem file.
 3.  You then pass this file to the `solve_mip_problem` tool.
@@ -53,7 +75,7 @@ This `remip-mcp` server exposes its tools via the Model Context Protocol. Client
 
 ---
 
-## Interacting with the Server via CLI (Conceptual)
+## Interacting with the Server via CLI
 
 This server exposes its capabilities through specific tools that can be invoked by any MCP-compatible client, including conceptual CLI clients. Below are the tools, their expected arguments, and any important considerations or limitations.
 
