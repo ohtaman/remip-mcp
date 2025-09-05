@@ -2,35 +2,39 @@
 
 [![CI](https://github.com/ohtamans/remip-mcp2/actions/workflows/ci.yml/badge.svg)](https://github.com/ohtamans/remip-mcp2/actions/workflows/ci.yml)
 
-This project provides a Model Context Protocol (MCP) server that uses a Pyodide environment to model Mixed-Integer Programming (MIP) problems and solve them with a ReMIP (Remote MIP) API.
+This project provides a service for modeling and solving Mixed-Integer Programming (MIP) problems. It is designed to be used as a tool within a larger system that follows the Model Context Protocol (MCP).
 
-## Project Overview
+## What is this?
 
-This project is a Node.js server that implements the Model Context Protocol (MCP). It exposes tools to generate, solve, and process MIP problems.
+This is a server that gives you tools to solve complex optimization problems. You can define your problem using Python's `pulp` library, send it to the server, and get a solution back. The server handles the complicated parts of setting up the problem and communicating with the solver.
 
-The server is built with TypeScript and Express. It uses Pyodide to run Python code, specifically the `pulp` library, to define the optimization problem. The problem is then sent to a ReMIP (Remote MIP) solver service for solving.
+It's useful for anyone who needs to solve resource allocation, scheduling, or other optimization tasks without wanting to build the entire solving pipeline themselves.
 
-The server supports streaming updates for logs and solver metrics back to the client as MCP notifications.
+## Core Features
 
-**Key Technologies:**
-*   Node.js
-*   TypeScript
-*   Express
-*   Model Context Protocol SDK (`@modelcontextprotocol/sdk`)
-*   Pyodide
-*   `pulp` (Python library for optimization modeling)
+This server provides three main tools:
 
-**Architecture:**
-1.  An Express server listens for MCP requests.
-2.  The `generate_mip_problem`, `solve_mip_problem`, and `process_mip_solution` tools are registered with the MCP server.
-3.  When `generate_mip_problem` is called, it executes user-provided Python code using Pyodide to generate a problem definition.
-4.  When `solve_mip_problem` is called, the problem is sent to a ReMIP server using the `ReMIPClient`.
-5.  The `ReMIPClient` streams `log` and `metric` events back during the solving process.
-6.  These events are relayed as MCP notifications to the client.
-7.  Once the solution is found, it is returned as the result of the tool call.
-8.  The `process_mip_solution` tool can be used to validate or analyze the solution using a Python script.
+*   **`generate_mip_problem`**: Takes your Python code (using the `pulp` library) and transforms it into a standard MIP problem format (.lp file). This is the first step to solving your problem.
+*   **`solve_mip_problem`**: Takes the problem file generated in the previous step and sends it to a powerful MIP solver. It streams live updates, so you can see the solver's progress in real-time.
+*   **`process_mip_solution`**: Once you have a solution, this tool lets you run another Python script to validate, analyze, or format the results into a more human-readable format.
+
+## How It Works
+
+The server is built with Node.js and uses a technology called **Pyodide** to safely run your Python code without you needing to install Python yourself.
+
+1.  You call the `generate_mip_problem` tool with your optimization model written in Python.
+2.  The server runs your code and creates a problem file.
+3.  You then pass this file to the `solve_mip_problem` tool.
+4.  The server sends the problem to a **ReMIP (Remote MIP) solver**.
+5.  As the solver works, it sends back logs and progress metrics, which you receive as notifications.
+6.  Once finished, you get the final solution.
+7.  You can then use `process_mip_solution` to work with the results.
 
 ---
+
+## For Developers
+
+This section contains information for developers who want to contribute to or run this project locally.
 
 ### Building and Running
 
@@ -74,8 +78,6 @@ The project requires a running ReMIP server. You can start a local one using the
 ```bash
 npm run remip-server
 ```
-
----
 
 ### Development Conventions
 
