@@ -1,5 +1,7 @@
 # ReMIP MCP Server
 
+[![CI](https://github.com/ohtamans/remip-mcp2/actions/workflows/ci.yml/badge.svg)](https://github.com/ohtamans/remip-mcp2/actions/workflows/ci.yml)
+
 This project provides a Model Context Protocol (MCP) server that uses a Pyodide environment to model Mixed-Integer Programming (MIP) problems and solve them with a ReMIP (Remote MIP) API.
 
 ## Project Overview
@@ -41,6 +43,15 @@ The server supports streaming updates for logs and solver metrics back to the cl
 npm install
 ```
 
+**Linting and Formatting:**
+```bash
+# Run the linter
+npm run lint
+
+# Automatically fix linting and formatting issues
+npm run lint:fix
+```
+
 **Running the development server:**
 This command starts the server with auto-reloading when source files change.
 ```bash
@@ -68,8 +79,8 @@ npm run remip-server
 
 ### Development Conventions
 
-*   **Coding Style:** The project uses TypeScript and follows standard modern JavaScript/TypeScript conventions (e.g., ES Modules). Prettier or a similar code formatter is recommended.
-*   **Testing:** A `test` script exists in `package.json` but it currently does nothing (`echo 1`). Testing appears to be a TODO.
+*   **Coding Style:** The project uses TypeScript, ESLint, and Prettier to enforce a consistent coding style. A pre-commit hook is set up with Husky to automatically format and lint your code before you commit.
+*   **Testing:** The project uses Jest for testing. You can run the tests with `npm test`.
 *   **Directory Structure:**
     *   `src/`: Contains the main source code.
     *   `src/schemas/`: Defines the data schemas for inputs and outputs.
