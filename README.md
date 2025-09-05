@@ -14,7 +14,7 @@ It's useful for anyone who needs to solve resource allocation, scheduling, or ot
 
 This server provides three main tools:
 
-*   **`generate_mip_problem`**: Takes your Python code (using the `pulp` library) and transforms it into a standard MIP problem format (.lp file). This is the first step to solving your problem.
+*   **`generate_mip_problem`**: Takes your Python code (using the `pulp` library) and transforms it into a JSON problem definition. This is the first step to solving your problem.
 *   **`solve_mip_problem`**: Takes the problem file generated in the previous step and sends it to a powerful MIP solver. It streams live updates, so you can see the solver's progress in real-time.
 *   **`process_mip_solution`**: Once you have a solution, this tool lets you run another Python script to validate, analyze, or format the results into a more human-readable format.
 
@@ -31,7 +31,7 @@ sequenceDiagram
 
     User->>Server: Call generate_mip_problem (Python Code)
     Server->>Pyodide: Run Python Code
-    Pyodide-->>Server: Problem File (.lp)
+    Pyodide-->>Server: JSON Problem Definition
     Server-->>User: Problem ID
 
     User->>Server: Call solve_mip_problem (Problem ID)
@@ -49,7 +49,7 @@ sequenceDiagram
 Here's a step-by-step breakdown of the process:
 
 1.  You call the `generate_mip_problem` tool with your optimization model written in Python.
-2.  The server runs your code and creates a problem file.
+2.  The server runs your code and creates a JSON problem definition.
 3.  You then pass this file to the `solve_mip_problem` tool.
 4.  The server sends the problem to a **ReMIP (Remote MIP) solver**.
 5.  As the solver works, it sends back logs and progress metrics, which you receive as notifications.
