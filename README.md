@@ -10,6 +10,32 @@ This is a server that gives you tools to solve complex optimization problems. Yo
 
 It's useful for anyone who needs to solve resource allocation, scheduling, or other optimization tasks without wanting to build the entire solving pipeline themselves.
 
+## Quick Start
+
+To get the `remip-mcp` server up and running quickly:
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/ohtaman/remip-mcp.git
+    cd remip-mcp
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Start the development server:**
+    ```bash
+    npm run dev
+    ```
+    This will start the server with auto-reloading.
+
+4.  **Start the ReMIP backend server (required):**
+    In a separate terminal, run:
+    ```bash
+    npm run remip-server
+    ```
+    The `remip-mcp` server requires a running ReMIP backend to solve problems.
+
 ## Core Features
 
 This server provides three main tools:
@@ -174,9 +200,11 @@ The project requires a running ReMIP server. You can start a local one using the
 npm run remip-server
 ```
 
+## Contributing
 
+We welcome contributions to the `remip-mcp` project! Here's how you can help:
 
-### Development Conventions
+### Development Environment
 
 *   **Coding Style:** The project uses TypeScript, ESLint, and Prettier to enforce a consistent coding style. A pre-commit hook is set up with Husky to automatically format and lint your code before you commit.
 *   **Testing:** The project uses Jest for testing. You can run the tests with `npm test`.
@@ -184,4 +212,20 @@ npm run remip-server
     *   `src/`: Contains the main source code.
     *   `src/schemas/`: Defines the data schemas for inputs and outputs.
     *   `src/connectors/`: Contains client code for interacting with external services like the ReMIP solver.
-*   **Commits:** No explicit commit message convention is specified.
+*   **Commits:** No explicit commit message convention is specified. Please aim for clear and concise commit messages.
+
+### How to Contribute
+
+1.  Fork the repository.
+2.  Create a new branch for your feature or bug fix.
+3.  Make your changes and ensure tests pass.
+4.  Submit a Pull Request.
+
+## License
+
+This project is licensed under the [Your License Here] - see the [LICENSE.md](LICENSE.md) file for details.
+(Note: Please replace "[Your License Here]" and "LICENSE.md" with actual license information.)
+
+
+
+
