@@ -79,7 +79,7 @@ async function setupMcpServer(
   mcpServer.registerTool(
     "generate_mip_problem",
     {
-      description: "Generates a Mixed-Integer Programming (MIP) problem from a Python script. It executes the script to create a PuLP LpProblem object, serializes it, and stores it. The tool returns a unique problem ID, along with any output from the script's stdout and stderr streams.",
+      description: "Generates a Mixed-Integer Programming (MIP) problem from a Python script using the PuLP library.\n\n**Constraint:** The script must create **exactly one** instance of a `pulp.LpProblem` object in the global scope. The name of the variable does not matter, but there must be only one.\n\nThe tool executes the script, finds the single `LpProblem` object, serializes it, and stores it. It returns a unique `problemId` for the stored problem, along with any output from the script's stdout and stderr streams.",
       inputSchema: generateMipProblemSchema.shape,
     },
     async (params: any, extra: any) => {
