@@ -79,6 +79,27 @@ The project requires a running ReMIP server. You can start a local one using the
 npm run remip-server
 ```
 
+### Client Connection Example (Conceptual)
+
+This `remip-mcp` server exposes its tools via the Model Context Protocol. Clients can connect to this server to utilize its MIP solving capabilities. While the exact connection mechanism depends on the client application, a client might use a configuration similar to the following to define how it connects to and manages this server:
+
+```json
+{
+  "mcpServers": {
+    "remip-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "github:ohtaman/remip-mcp",
+        "--start-remip-server"
+      ]
+    }
+  }
+}
+```
+
+*Note: This JSON is an example of a client-side configuration and is not processed by this `remip-mcp` server directly. It illustrates how a client might define the command to launch or manage this server.*
+
 ### Development Conventions
 
 *   **Coding Style:** The project uses TypeScript, ESLint, and Prettier to enforce a consistent coding style. A pre-commit hook is set up with Husky to automatically format and lint your code before you commit.
