@@ -1,50 +1,56 @@
 # ReMIP MCP Server
 
+> 🚀 A powerful Model Context Protocol (MCP) server for solving Mixed-Integer Programming (MIP) problems with Pyodide and ReMIP.
+
 [![CI](https://github.com/ohtamans/remip-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ohtamans/remip-mcp/actions/workflows/ci.yml)
+
+---
 
 This project provides a service for modeling and solving Mixed-Integer Programming (MIP) problems. It is designed to be used as a tool within a larger system that follows the Model Context Protocol (MCP).
 
-## What is this?
+## 💡 What is this?
 
 This is a server that gives you tools to solve complex optimization problems. You can define your problem using Python's `pulp` library, send it to the server, and get a solution back. The server handles the complicated parts of setting up the problem and communicating with the solver.
 
 It's useful for anyone who needs to solve resource allocation, scheduling, or other optimization tasks without wanting to build the entire solving pipeline themselves.
 
-## Quick Start
+---
+
+## ⚡ Quick Start
 
 To get the `remip-mcp` server up and running quickly:
 
-1.  **Clone the repository:**
+1.  **Clone the repository:** ⬇️
     ```bash
     git clone https://github.com/ohtaman/remip-mcp.git
     cd remip-mcp
     ```
-2.  **Install dependencies:**
+2.  **Install dependencies:** 📦
     ```bash
     npm install
     ```
-3.  **Start the development server:**
+3.  **Start the development server:** ▶️
     ```bash
     npm run dev
     ```
     This will start the server with auto-reloading.
 
-4.  **Start the ReMIP backend server (required):**
+4.  **Start the ReMIP backend server (required):** ⚙️
     In a separate terminal, run:
     ```bash
     npm run remip-server
     ```
     The `remip-mcp` server requires a running ReMIP backend to solve problems.
 
-## Core Features
+## ✨ Core Features
 
 This server provides three main tools:
 
-*   **`generate_mip_problem`**: Takes your Python code (using the `pulp` library) and transforms it into a JSON problem definition. This is the first step to solving your problem.
-*   **`solve_mip_problem`**: Takes the problem file generated in the previous step and sends it to a powerful MIP solver. It streams live updates, so you can see the solver's progress in real-time.
-*   **`process_mip_solution`**: Once you have a solution, this tool lets you run another Python script to validate, analyze, or format the results into a more human-readable format.
+*   **`generate_mip_problem`**: 📝 Takes your Python code (using the `pulp` library) and transforms it into a JSON problem definition. This is the first step to solving your problem.
+*   **`solve_mip_problem`**: ⚙️ Takes the problem file generated in the previous step and sends it to a powerful MIP solver. It streams live updates, so you can see the solver's progress in real-time.
+*   **`process_mip_solution`**: 📊 Once you have a solution, this tool lets you run another Python script to validate, analyze, or format the results into a more human-readable format.
 
-## How It Works
+## 🧠 How It Works
 
 The server is built with Node.js and uses a technology called **Pyodide** to safely run your Python code without you needing to install Python yourself.
 
@@ -82,7 +88,7 @@ Here's a step-by-step breakdown of the process:
 6.  Once finished, you get the final solution.
 7.  You can then use `process_mip_solution` to work with the results.
 
-### Client Connection Example (Conceptual)
+### 🔌 Client Connection Example (Conceptual)
 
 This `remip-mcp` server exposes its tools via the Model Context Protocol. Clients can connect to this server to utilize its MIP solving capabilities. While the exact connection mechanism depends on the client application, a client might use a configuration similar to the following to define how it connects to and manages this server:
 
@@ -105,16 +111,16 @@ This `remip-mcp` server exposes its tools via the Model Context Protocol. Client
 
 ---
 
-## Interacting with the Server via CLI
+## 💻 Interacting with the Server via CLI
 
 This server exposes its capabilities through specific tools that can be invoked by any MCP-compatible client, including conceptual CLI clients. Below are the tools, their expected arguments, and any important considerations or limitations.
 
-### Tool: `generate_mip_problem`
+### Tool: `generate_mip_problem` 📝
 
 *   **Purpose**: Converts user-provided Python code (using the `pulp` library) into a problem definition that can be solved.
-*   **Arguments**:
+*   **Arguments**: ✅
     *   `problemDefinitionCode` (string, **required**): Your Python code defining the MIP problem.
-*   **Limitations**:
+*   **Limitations**: ⚠️
     *   The Python code must use the `pulp` library.
     *   It must define exactly one `pulp.LpProblem` instance.
     *   Standard Python syntax and `pulp` conventions apply.
@@ -124,12 +130,12 @@ This server exposes its capabilities through specific tools that can be invoked 
     mcp-cli call generate_mip_problem --problemDefinitionCode "import pulp; prob = pulp.LpProblem('MyProblem', pulp.LpMaximize); x = pulp.LpVariable('x'); prob += x"
     ```
 
-### Tool: `solve_mip_problem`
+### Tool: `solve_mip_problem` ⚙️
 
 *   **Purpose**: Solves a previously generated MIP problem using a ReMIP solver.
-*   **Arguments**:
+*   **Arguments**: ✅
     *   `problemId` (string, **required**): The ID of the problem generated by `generate_mip_problem`.
-*   **Limitations**:
+*   **Limitations**: ⚠️
     *   Requires a running ReMIP backend server.
     *   The `problemId` must correspond to a valid, existing problem definition on the server.
 *   **Conceptual CLI Example**:
@@ -137,13 +143,13 @@ This server exposes its capabilities through specific tools that can be invoked 
     mcp-cli call solve_mip_problem --problemId "your-problem-id-here"
     ```
 
-### Tool: `process_mip_solution`
+### Tool: `process_mip_solution` 📊
 
 *   **Purpose**: Processes the solution of a solved MIP problem using user-provided Python code.
-*   **Arguments**:
+*   **Arguments**: ✅
     *   `problemId` (string, **required**): The ID of the solved problem.
     *   `solutionProcessingCode` (string, **required**): Your Python code to process the solution.
-*   **Limitations**:
+*   **Limitations**: ⚠️
     *   The `problemId` must correspond to a valid, *solved* problem.
     *   The Python code will have access to the solution data.
 *   **Conceptual CLI Example**:
@@ -153,11 +159,11 @@ This server exposes its capabilities through specific tools that can be invoked 
 
 ---
 
-## For Developers
+## 👨‍💻 For Developers
 
 This section contains information for developers who want to contribute to or run this project locally.
 
-### Building and Running
+### Building and Running 🛠️
 
 **Prerequisites:**
 *   Node.js
@@ -200,7 +206,7 @@ The project requires a running ReMIP server. You can start a local one using the
 npm run remip-server
 ```
 
-## License
+## 📄 License
 
 This project is licensed under the Apache-2.0 License - see the [LICENSE](LICENSE) file for details.
 
