@@ -5,19 +5,19 @@
   "license": "Apache-2.0",
   "author": "ohtamans@gmail.com",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "bin": {
     "remip-mcp": "dist/index.js"
   },
   "files": [
-    "src"
+    "dist"
   ],
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "build": "tsc && shx cp -r node_modules/pyodide/ dist/pyodide",
-    "preinstall": "npm run build"
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
