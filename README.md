@@ -1,6 +1,6 @@
 # ReMIP MCP Server
 
-[![CI](https://github.com/ohtamans/remip-mcp2/actions/workflows/ci.yml/badge.svg)](https://github.com/ohtamans/remip-mcp2/actions/workflows/ci.yml)
+[![CI](https://github.com/ohtamans/remip-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ohtamans/remip-mcp/actions/workflows/ci.yml)
 
 This project provides a service for modeling and solving Mixed-Integer Programming (MIP) problems. It is designed to be used as a tool within a larger system that follows the Model Context Protocol (MCP).
 
