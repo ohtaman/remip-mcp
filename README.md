@@ -23,23 +23,27 @@ This server provides three main tools:
 The server is built with Node.js and uses a technology called **Pyodide** to safely run your Python code without you needing to install Python yourself.
 
 ```mermaid
-graph TD
-    A[User/Client] --> B{Call generate_mip_problem};
-    B --> C[remip-mcp Server];
-    C --> D[Pyodide ("runs Python code")];
-    D --> E[Problem File (.lp)];
-    E --> F{Call solve_mip_problem};
-    F --> C;
-    C --> G[ReMIP Solver];
-    G -- Stream Logs/Metrics --> C;
-    G -- Solution --> C;
-    C --> H[Return Solution];
-    H --> A;
-    A --> I{Call process_mip_solution};
-    I --> C;
-    C --> J[Pyodide ("processes solution")];
-    J --> K[Processed Result];
-    K --> A;
+sequenceDiagram
+    participant User as User/Client
+    participant Server as remip-mcp Server
+    participant Pyodide as Pyodide
+    participant ReMIP as ReMIP Solver
+
+    User->>Server: Call generate_mip_problem (Python Code)
+    Server->>Pyodide: Run Python Code
+    Pyodide-->>Server: Problem File (.lp)
+    Server-->>User: Problem ID
+
+    User->>Server: Call solve_mip_problem (Problem ID)
+    Server->>ReMIP: Send Problem
+    ReMIP-->>Server: Stream Logs/Metrics
+    ReMIP-->>Server: Solution
+    Server-->>User: Solution
+
+    User->>Server: Call process_mip_solution (Problem ID, Python Code)
+    Server->>Pyodide: Process Solution
+    Pyodide-->>Server: Processed Result
+    Server-->>User: Processed Result
 ```
 
 Here's a step-by-step breakdown of the process:
