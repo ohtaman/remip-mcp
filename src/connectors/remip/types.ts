@@ -83,7 +83,6 @@ export interface Problem {
   sos2?: SOSConstraint[];
 }
 
-
 //=============================================================================
 // API-Specific Types (for communication)
 //=============================================================================
@@ -108,6 +107,17 @@ export interface MetricData {
   gap?: number;
 }
 
+export interface Logger {
+  info(obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void;
+  info(msg: string, ...args: unknown[]): void;
+  warn(obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void;
+  warn(msg: string, ...args: unknown[]): void;
+  error(obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void;
+  error(msg: string, ...args: unknown[]): void;
+  debug(obj: Record<string, unknown>, msg?: string, ...args: unknown[]): void;
+  debug(msg: string, ...args: unknown[]): void;
+}
+
 /**
  * Options for the ReMIPClient constructor.
  */
@@ -122,40 +132,8 @@ export interface ReMIPClientOptions {
    * @default true
    */
   stream?: boolean;
-}
-
-//=============================================================================
-// Logger Interface and Client Options
-//=============================================================================
-
-export interface Logger {
-    info(obj: Record<string, any>, msg?: string, ...args: any[]): void;
-    info(msg: string, ...args: any[]): void;
-    warn(obj: Record<string, any>, msg?: string, ...args: any[]): void;
-    warn(msg: string, ...args: any[]): void;
-    error(obj: Record<string, any>, msg?: string, ...args: any[]): void;
-    error(msg: string, ...args: any[]): void;
-    debug(obj: Record<string, any>, msg?: string, ...args: any[]): void;
-    debug(msg: string, ...args: any[]): void;
-  }
-  
-  
   /**
-   * Options for the ReMIPClient constructor.
+   * An instance of a pino-compatible logger for logging client activity.
    */
-  export interface ReMIPClientOptions {
-    /**
-     * The base URL of the ReMIP server.
-     * @default 'http://localhost:8000'
-     */
-    baseUrl?: string;
-    /**
-     * Whether to use Server-Sent Events (SSE) for streaming logs and results.
-     * @default true
-     */
-    stream?: boolean;
-    /**
-     * An instance of a pino-compatible logger for logging client activity.
-     */
-    logger: Logger;
-  }
+  logger: Logger;
+}
