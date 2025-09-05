@@ -2,7 +2,6 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 // src/index.ts
-import { randomUUID } from "crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -85,8 +84,13 @@ async function setupMcpServer(
     },
     async (params: any, extra: any) => {
       const sessionId = extra.sessionId!;
-      const result = await generateMipProblem(sessionId, params, { pyodideRunner, storageService });
-      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      try {
+        const result = await generateMipProblem(sessionId, params, { pyodideRunner, storageService });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      } finally {
+        pyodideRunner.cleanup(sessionId);
+        logger.info({ event: "pyodide_cleanup", sessionId }, "Pyodide instance cleaned up.");
+      }
     },
   );
   logger.info("Registered method: generate_mip_problem");
@@ -113,8 +117,13 @@ async function setupMcpServer(
     },
     async (params: any, extra: any) => {
       const sessionId = extra.sessionId!;
-      const result = await processMipSolution(sessionId, params, { pyodideRunner, storageService });
-      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      try {
+        const result = await processMipSolution(sessionId, params, { pyodideRunner, storageService });
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      } finally {
+        pyodideRunner.cleanup(sessionId);
+        logger.info({ event: "pyodide_cleanup", sessionId }, "Pyodide instance cleaned up.");
+      }
     },
   );
   logger.info("Registered method: process_mip_solution");
