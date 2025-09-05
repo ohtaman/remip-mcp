@@ -31,7 +31,8 @@ describe('processMipSolution', () => {
         set: jest.fn()
       },
       loadPackage: jest.fn(),
-      pyimport: jest.fn()
+      pyimport: jest.fn(),
+      toPy: jest.fn().mockImplementation(x => x)
     };
     pyodideRunner.getPyodide.mockResolvedValue(mockPyodide as any);
 
