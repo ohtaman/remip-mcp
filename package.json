@@ -7,7 +7,7 @@
   "type": "module",
   "main": "src/index.ts",
   "bin": {
-    "remip-mcp": "src/index.ts"
+    "remip-mcp": "dist/index.js"
   },
   "files": [
     "src"
@@ -16,14 +16,14 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
-    "build": "tsc && shx cp -r node_modules/pyodide/ dist/pyodide"
+    "build": "tsc && shx cp -r node_modules/pyodide/ dist/pyodide",
+    "preinstall": "npm run build"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
     "jest": "^30.0.5",
     "pino-pretty": "^13.1.1",
-    "shx": "^0.4.0",
     "ts-jest": "^29.4.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
@@ -36,6 +36,7 @@
     "node-cache": "^5.1.2",
     "pino": "^9.9.0",
     "pyodide": "^0.28.2",
+    "shx": "^0.4.0",
     "tsx": "^4.20.4",
     "zod": "^3.25.76"
   }
