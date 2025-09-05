@@ -88,7 +88,7 @@ Here's a step-by-step breakdown of the process:
 6.  Once finished, you get the final solution.
 7.  You can then use `process_mip_solution` to work with the results.
 
-### 🔌 Client Connection Example (Conceptual)
+## 🔌 Client Interaction and Command Line Arguments
 
 This `remip-mcp` server exposes its tools via the Model Context Protocol. Clients can connect to this server to utilize its MIP solving capabilities. While the exact connection mechanism depends on the client application, a client might use a configuration similar to the following to define how it connects to and manages this server:
 
@@ -108,6 +108,46 @@ This `remip-mcp` server exposes its tools via the Model Context Protocol. Client
 ```
 
 *Note: This JSON is an example of a client-side configuration and is not processed by this `remip-mcp` server directly. It illustrates how a client might define the command to launch or manage this server.*
+
+### Command Line Arguments
+
+The `remip-mcp` server can be configured using the following command-line arguments when run directly (e.g., via `node dist/index.js` or `npx ...`).
+
+*   **`--http`** (boolean)
+    *   Enables the HTTP transport for the MCP server. When enabled, the server will listen for MCP requests over HTTP.
+    *   Default: `false`
+*   **`--port <number>`** (number)
+    *   Specifies the port for the HTTP transport. This argument is only relevant when `--http` is enabled.
+    *   Default: `8080`
+*   **`--start-remip-server`** (boolean)
+    *   If set, the `remip-mcp` server will attempt to start a local ReMIP backend server as a child process.
+    *   Default: `false`
+*   **`--remip-source-uri <string>`** (string)
+    *   Specifies the source URI for the ReMIP server to be started. This is used when `--start-remip-server` is true.
+    *   Default: `github:ohtaman/remip-server`
+*   **`--remip-host <string>`** (string)
+    *   Specifies the host of the ReMIP server that `remip-mcp` should connect to.
+    *   Default: `localhost`
+*   **`--remip-port <number>`** (number)
+    *   Specifies the port of the ReMIP server that `remip-mcp` should connect to.
+    *   Default: `8081`
+*   **`--pyodide-packages <string[]>`** (array of strings)
+    *   Provides a comma-separated list of additional Pyodide packages (e.g., `numpy,pandas`) to be installed and available in the Pyodide environment.
+    *   Default: `[]`
+
+**Example Usage:**
+
+To start the `remip-mcp` server with HTTP transport on port 9000 and also start a local ReMIP server:
+
+```bash
+node dist/index.js --http --port 9000 --start-remip-server
+```
+
+To connect to an existing ReMIP server at `my-remip-host:8000` and enable HTTP transport:
+
+```bash
+node dist/index.js --http --remip-host my-remip-host --remip-port 8000
+```
 
 ---
 
@@ -206,45 +246,7 @@ The project requires a running ReMIP server. You can start a local one using the
 npm run remip-server
 ```
 
-### Command Line Arguments
 
-The `remip-mcp` server can be configured using the following command-line arguments when run directly (e.g., via `node dist/index.js` or `npx ...`).
-
-*   **`--http`** (boolean)
-    *   Enables the HTTP transport for the MCP server. When enabled, the server will listen for MCP requests over HTTP.
-    *   Default: `false`
-*   **`--port <number>`** (number)
-    *   Specifies the port for the HTTP transport. This argument is only relevant when `--http` is enabled.
-    *   Default: `8080`
-*   **`--start-remip-server`** (boolean)
-    *   If set, the `remip-mcp` server will attempt to start a local ReMIP backend server as a child process.
-    *   Default: `false`
-*   **`--remip-source-uri <string>`** (string)
-    *   Specifies the source URI for the ReMIP server to be started. This is used when `--start-remip-server` is true.
-    *   Default: `github:ohtaman/remip-server`
-*   **`--remip-host <string>`** (string)
-    *   Specifies the host of the ReMIP server that `remip-mcp` should connect to.
-    *   Default: `localhost`
-*   **`--remip-port <number>`** (number)
-    *   Specifies the port of the ReMIP server that `remip-mcp` should connect to.
-    *   Default: `8081`
-*   **`--pyodide-packages <string[]>`** (array of strings)
-    *   Provides a comma-separated list of additional Pyodide packages (e.g., `numpy,pandas`) to be installed and available in the Pyodide environment.
-    *   Default: `[]`
-
-**Example Usage:**
-
-To start the `remip-mcp` server with HTTP transport on port 9000 and also start a local ReMIP server:
-
-```bash
-node dist/index.js --http --port 9000 --start-remip-server
-```
-
-To connect to an existing ReMIP server at `my-remip-host:8000` and enable HTTP transport:
-
-```bash
-node dist/index.js --http --remip-host my-remip-host --remip-port 8000
-```
 
 ## 📄 License
 
