@@ -1,6 +1,0 @@
-{
-  "tool_name": "generate_mip_problem",
-  "args": {
-    "problemDefinitionCode": "import pulp\n\n# 1. Initialize the Problem\n# We are creating a maximization problem called 'Simple_MIP'\nprob = pulp.LpProblem(\"Simple_MIP\", pulp.LpMaximize)\n\n# 2. Define Decision Variables\n# 'x' and 'y' are the integer variables we want to solve for.\n# lowBound=0 means they cannot be negative.\nx = pulp.LpVariable(\"x\", lowBound=0, cat='Integer')\ny = pulp.LpVariable(\"y\", lowBound=0, cat='Integer')\n\n# 3. Define the Objective Function\n# This is the value we want to maximize. \n# We assume product 'x' gives 10 units of benefit and 'y' gives 20.\nprob += 10 * x + 20 * y, \"Total_Benefit\"\n\n# 4. Define the Constraints\n# These are the limitations on our resources.\nprob += x + y <= 10, \"Resource_1_Limit\"\nprob += 5 * x + 8 * y <= 60, \"Resource_2_Limit\"\n\n# The problem is now fully defined and ready to be processed."
-  }
-}
