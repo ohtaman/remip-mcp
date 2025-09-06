@@ -17,8 +17,8 @@ jobs:
         with:
           node-version: '20.x'
           cache: 'npm'
-      - name: Install uvx
-        run: npm install -g uvx
+      - name: Install uv
+        run: pip install uv
       - name: Install dependencies
         run: npm ci
       - name: Lint
