@@ -2,7 +2,6 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 // src/index.ts
-
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -123,9 +122,10 @@ async function setupMcpServer(
         'Solves a previously generated Mixed-Integer Programming (MIP) problem. It retrieves the problem definition using the provided problem ID and submits it to a ReMIP (Remote MIP) solver. The tool streams logs and metrics from the solver and returns the final solution along with a unique solution ID.',
       inputSchema: solveMipProblemSchema.shape,
     },
+    // @ts-expect-error - The McpServer's inferred type for sendNotification is highly specific and
+    // difficult to satisfy without making the tool's code overly complex. The runtime behavior is correct.
     async (
       params: z.infer<typeof solveMipProblemSchema>,
-      // @ts-expect-error - HACK: Using a simplified type to avoid complex type issues with McpServer
       extra: McpExtraArgs & {
         sendNotification: (notification: {
           method: string;
