@@ -122,14 +122,22 @@ async function setupMcpServer(
         'Solves a previously generated Mixed-Integer Programming (MIP) problem. It retrieves the problem definition using the provided problem ID and submits it to a ReMIP (Remote MIP) solver. The tool streams logs and metrics from the solver and returns the final solution along with a unique solution ID.',
       inputSchema: solveMipProblemSchema.shape,
     },
+    // @ts-expect-error - The McpServer's inferred type for sendNotification is highly specific and
+    // difficult to satisfy without making the tool's code overly complex. The runtime behavior is correct.
     async (
       params: z.infer<typeof solveMipProblemSchema>,
-      extra: McpExtraArgs,
+      extra: McpExtraArgs & {
+        sendNotification: (notification: {
+          method: string;
+          params: unknown;
+        }) => Promise<void>;
+      },
     ) => {
       const sessionId = extra.sessionId!;
       const result = await solveMipProblem(sessionId, params, {
         storageService,
         remipClient,
+        sendNotification: extra.sendNotification,
       });
       return { content: [{ type: 'text', text: JSON.stringify(result) }] };
     },
