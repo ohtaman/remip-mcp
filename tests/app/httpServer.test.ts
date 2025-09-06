@@ -17,8 +17,8 @@ describe('HTTP Server for MCP - GET /mcp 405 Bug', () => {
     >();
 
     const mcpSessionFactory = async (
-      sessionIdGenerator: () => string,
-      onSessionClosed: (sessionId: string) => void,
+      _sessionIdGenerator: () => string,
+      _onSessionClosed: (sessionId: string) => void,
     ) => {
       // Mock transport and mcpServer for the test
       const mockTransport = {
@@ -76,7 +76,7 @@ describe('HTTP Server for MCP - GET /mcp 405 Bug', () => {
             });
           }
         }
-      } catch (err) {
+      } catch (_err) {
         res.status(500).json({ jsonrpc: '2.0', error: { code: -32603, message: 'Internal server error' }, id: null });
       }
     });
@@ -105,7 +105,7 @@ describe('HTTP Server for MCP - GET /mcp 405 Bug', () => {
             id: null,
           });
         }
-      } catch (err) {
+      } catch (_err) {
         res.status(500).json({ jsonrpc: '2.0', error: { code: -32603, message: 'Internal server error' }, id: null });
       }
     });
@@ -151,7 +151,7 @@ describe('HTTP Server for MCP - GET /mcp 405 Bug', () => {
         postData += chunk;
       });
       postRes.on('end', () => {
-        const initializeResult = JSON.parse(postData);
+        JSON.parse(postData);
         // In this test, we expect the session ID to be 'test-session-id'
         const sessionId = postRes.headers['mcp-session-id'];
         expect(sessionId).toBe('test-session-id');
