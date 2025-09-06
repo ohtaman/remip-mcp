@@ -1,64 +1,49 @@
-# Todo List
+# TODOs
 
-This document outlines the tasks required to implement the MIP solver application based on the requirements and design documents.
+## Ghost Process on STDIO Disconnect
 
-## High-Level Tasks
+**Problem:**
+When running the server with `--start-remip-server` and connecting via STDIO, disconnecting the client causes the main server process to exit but leaves the `uvx` and `remip` python processes running as orphans.
 
-- [x] **Implement MCP Server:** Set up an Express server that speaks the Model Context Protocol.
-- [x] **Implement `generate_mip_problem` tool:** This tool takes Python code, runs it in Pyodide, and stores the resulting problem description.
-- [x] **Implement `solve_mip_problem` tool:** This tool takes a problem ID, retrieves the problem, sends it to the ReMIP solver, and stores the solution.
-- [x] **Implement `validate_mip_solution` tool:** This tool takes a solution ID and validation code, retrieves the solution, and runs the validation.
-- [x] **Implement Storage Service:** A service for temporary storage of problems and solutions (Claim Check Pattern).
-- [x] **Implement Pyodide Runner:** A manager for Pyodide environments, ensuring session isolation.
+**Root Cause Analysis:**
+1.  Disconnecting the STDIO client triggers the `'close'` event on `process.stdin`.
+2.  The event handler for this in `src/index.ts` calls `process.exit(0)` directly.
+3.  Crucially, this handler does **not** call `cleanupReMIPProcess()` before exiting.
+4.  The main process terminates without sending any signal to the child `remip` process, leaving it and its children orphaned.
 
-## Detailed Breakdown
+**Proposed Solution:**
+Modify the `process.stdin.on('close', ...)` handler in `src/index.ts` to explicitly call the cleanup function before exiting.
 
-### MCP Server (`src/index.ts`)
+```typescript
+// src/index.ts
 
-- [x] Initialize Express server.
-- [x] Register `generate_mip_problem` tool.
-- [x] Register `solve_mip_problem` tool.
-- [x] Register `validate_mip_solution` tool.
-- [x] Extract `session_id` from incoming requests.
+// ... inside the else block for stdio transport
 
-### Storage Service (`src/app/storage.ts`)
+process.stdin.on('close', () => {
+  logger.info({ event: 'stdin_closed' }, 'STDIN closed, shutting down.');
+  cleanupReMIPProcess(logger); // <-- Add this line
+  process.exit(0);
+});
+```
 
-- [x] Create the `storage.ts` file.
-- [x] Implement `get`, `set`, `delete` functions.
-- [x] Ensure keys are namespaced by `session_id`.
-- [x] Choose an underlying implementation (`node-cache` is a good starting point).
+---
 
-### Pyodide Runner (`src/app/pyodideRunner.ts`)
+## "Not Connected" Error on HTTP Disconnect
 
-- [x] Create the `pyodideRunner.ts` file.
-- [x] Implement a mechanism to manage a pool of Pyodide instances.
-- [x] Map instances to `session_id`.
-- [x] Ensure environments are not shared between sessions.
+**Problem:**
+When running the server with `--start-remip-server` and connecting via HTTP (the default for `mcp-inspector`), if the client disconnects while `solve_mip_problem` is running, the server transport throws a "Not connected" error. This can leave the server in a bad state, preventing future connections.
 
-### Tool: `generate_mip_problem` (`src/tools/generateMipProblem.ts`)
+**Root Cause Analysis:**
+1.  **Implicit Notifications via stdout:** The `ReMIPClient` is designed to log events (`log`, `metric`) directly to the console using its own logger instance.
+2.  **Stdout Forwarding:** The MCP server transport captures anything written to the process's `stdout` and forwards it to the connected client. This is how the client currently receives solver logs.
+3.  **Race Condition:** When a client disconnects, the HTTP connection is closed. However, the `remipClient.solve()` method continues to run in the background. When the ReMIP server sends another event, `ReMIPClient` logs it to `stdout`. The MCP transport tries to send this message to the now-disconnected client, causing the `Error: Not connected`.
 
-- [x] Create the `generateMipProblem.ts` file.
-- [x] Define the tool's schema (input: `problemDefinitionCode`, output: `problemId`).
-- [x] Get a Pyodide instance from the `pyodideRunner`.
-- [x] Execute the user's Python code.
-- [x] Serialize the `LpProblem` object to JSON.
-- [x] Store the JSON using the `StorageService`.
-- [x] Return the `problem_id`.
+**Proposed Solution:**
+The fundamental issue is the reliance on `stdout` for notifications. The solution is to refactor the code to use the MCP SDK's explicit notification mechanism, which is connection-aware.
 
-### Tool: `solve_mip_problem` (`src/tools/solveMipProblem.ts`)
-
-- [x] Create the `solveMipProblem.ts` file.
-- [x] Define the tool's schema (input: `problemId`, output: `solutionId`).
-- [x] Retrieve the problem JSON from `StorageService` using `problem_id`.
-- [x] Use `ReMIPClient` to solve the problem.
-- [x] Store the solution using `StorageService`.
-- [x] Return the `solution_id`.
-
-### Tool: `validate_mip_solution` (`src/tools/validateMipSolution.ts`)
-
-- [x] Create the `validateMipSolution.ts` file.
-- [x] Define the tool's schema (input: `solutionId`, `validationCode`, output: `status`, `message`).
-- [x] Retrieve the solution from `StorageService` using `solution_id`.
-- [x] Get a Pyodide instance from the `pyodideRunner`.
-- [x] Execute the validation code.
-- [x] Return the validation result.
+1.  **Refactor `ReMIPClient`:** Modify `ReMIPClient` to be an `EventEmitter`. Instead of logging events, it should `emit` them (e.g., `remipClient.emit('log', data)`).
+2.  **Update `solveMipProblem`:**
+    *   The `solveMipProblem` function must accept the `sendNotification` function, which is provided by the MCP server's `RequestHandlerExtra` object.
+    *   Inside `solveMipProblem`, add event listeners for the `log` and `metric` events from the `ReMIPClient` instance.
+    *   When an event is received, use the `sendNotification` function to send a properly formatted `LoggingMessageNotification` to the client. This function is aware of the connection state and will not throw an error if the client has disconnected.
+3.  **Update `index.ts`:** Modify the `solve_mip_problem` tool registration to pass `extra.sendNotification` to the `solveMipProblem` function.

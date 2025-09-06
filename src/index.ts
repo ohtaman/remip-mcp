@@ -242,6 +242,7 @@ async function main() {
     await setupMcpServer(transport, remipClient, storageService, pyodideRunner);
     process.stdin.on('close', () => {
       logger.info({ event: 'stdin_closed' }, 'STDIN closed, shutting down.');
+      cleanupReMIPProcess(logger);
       process.exit(0);
     });
   }
