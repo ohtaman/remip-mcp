@@ -1,4 +1,5 @@
 import { Solution } from '../../schemas/solutions.js';
+import { EventEmitter } from 'node:events';
 import type {
   Problem,
   LogData,
@@ -11,7 +12,7 @@ import type {
  * A client for connecting to and interacting with the ReMIP (Remote MIP) Server API.
  * It can handle both standard JSON and streaming (Server-Sent Events) responses.
  */
-export class ReMIPClient {
+export class ReMIPClient extends EventEmitter {
   private readonly baseUrl: string;
   private readonly stream: boolean;
   private readonly logger: Logger;
@@ -25,6 +26,7 @@ export class ReMIPClient {
     stream = true,
     logger,
   }: ReMIPClientOptions) {
+    super();
     this.baseUrl = baseUrl;
     this.stream = stream;
     this.logger = logger;
@@ -129,16 +131,12 @@ export class ReMIPClient {
                 break;
               case 'log': {
                 const logData = data as LogData;
-                this.logger.info(
-                  `[ReMIP Log][${logData.timestamp}] ${logData.message}`,
-                );
+                this.emit('log', logData);
                 break;
               }
               case 'metric': {
                 const metricData = data as MetricData;
-                this.logger.info(
-                  `[ReMIP Metric][${metricData.timestamp}] Iter: ${metricData.iteration}, Obj: ${metricData.objective_value}, Gap: ${metricData.gap}`,
-                );
+                this.emit('metric', metricData);
                 break;
               }
               default:

@@ -19,6 +19,7 @@ describe('solveMipProblem', () => {
     // We can provide a minimal mock implementation for ReMIPClient
     remipClient = {
       solve: jest.fn(),
+      on: jest.fn(),
     } as unknown as jest.Mocked<ReMIPClient>;
   });
 
@@ -26,21 +27,31 @@ describe('solveMipProblem', () => {
     const sessionId = 'session-123';
     const problemId = 'problem-abc';
     const mockProblem = { name: 'TestProblem' }; // Mock problem data
-    const mockSolution: Solution = { // Mock solution data conforming to the schema
+    const mockSolution: Solution = {
+      // Mock solution data conforming to the schema
       objectiveValue: 100,
-      variableValues: { 'x': 10 },
+      variableValues: { x: 10 },
     };
 
     // Setup mock return values
     storageService.get.mockReturnValue(mockProblem);
     remipClient.solve.mockResolvedValue(mockSolution);
 
-    const result = await solveMipProblem(sessionId, { problemId }, { storageService, remipClient });
+    const sendNotification = jest.fn();
+    const result = await solveMipProblem(
+      sessionId,
+      { problemId },
+      { storageService, remipClient, sendNotification },
+    );
 
     // Verify the interactions
     expect(storageService.get).toHaveBeenCalledWith(sessionId, problemId);
     expect(remipClient.solve).toHaveBeenCalledWith(mockProblem);
-    expect(storageService.set).toHaveBeenCalledWith(sessionId, expect.any(String), mockSolution);
+    expect(storageService.set).toHaveBeenCalledWith(
+      sessionId,
+      expect.any(String),
+      mockSolution,
+    );
 
     // Verify the result structure and content
     expect(result).toHaveProperty('solutionId');
@@ -56,8 +67,13 @@ describe('solveMipProblem', () => {
     // Setup mock to return undefined
     storageService.get.mockReturnValue(undefined);
 
+    const sendNotification = jest.fn();
     await expect(
-      solveMipProblem(sessionId, { problemId }, { storageService, remipClient })
+      solveMipProblem(
+        sessionId,
+        { problemId },
+        { storageService, remipClient, sendNotification },
+      ),
     ).rejects.toThrow('Problem not found');
 
     // Ensure solve was not called

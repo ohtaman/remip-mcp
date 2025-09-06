@@ -2,6 +2,7 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 // src/index.ts
+
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -124,12 +125,19 @@ async function setupMcpServer(
     },
     async (
       params: z.infer<typeof solveMipProblemSchema>,
-      extra: McpExtraArgs,
+      // @ts-expect-error - HACK: Using a simplified type to avoid complex type issues with McpServer
+      extra: McpExtraArgs & {
+        sendNotification: (notification: {
+          method: string;
+          params: unknown;
+        }) => Promise<void>;
+      },
     ) => {
       const sessionId = extra.sessionId!;
       const result = await solveMipProblem(sessionId, params, {
         storageService,
         remipClient,
+        sendNotification: extra.sendNotification,
       });
       return { content: [{ type: 'text', text: JSON.stringify(result) }] };
     },
