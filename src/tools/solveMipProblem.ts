@@ -10,7 +10,6 @@ export async function solveMipProblem(
   services: {
     storageService: StorageService;
     remipClient: ReMIPClient;
-    // @ts-expect-error - HACK: Using a simplified type to avoid complex type issues with McpServer
     sendNotification: (notification: {
       method: string;
       params: unknown;
@@ -25,25 +24,27 @@ export async function solveMipProblem(
 
   remipClient.on('log', (log: LogData) => {
     sendNotification({
-      method: 'notifications/message',
+      method: 'notifications/logging/message',
       params: {
         message: `[ReMIP Log][${log.timestamp}] ${log.message}`,
-        level: 'info',
       },
     });
   });
 
   remipClient.on('metric', (metric: MetricData) => {
     sendNotification({
-      method: 'notifications/message',
+      method: 'notifications/logging/message',
       params: {
         message: `[ReMIP Metric][${metric.timestamp}] Iter: ${metric.iteration}, Obj: ${metric.objective_value}, Gap: ${metric.gap}`,
-        level: 'info',
       },
     });
   });
 
   const solution = await remipClient.solve(problem);
+
+  // Important: Remove listeners after the operation is complete
+  remipClient.removeAllListeners('log');
+  remipClient.removeAllListeners('metric');
 
   const solutionId = randomUUID();
   storageService.set(sessionId, solutionId, solution);

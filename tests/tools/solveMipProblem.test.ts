@@ -1,11 +1,18 @@
 import { solveMipProblem } from '../../src/tools/solveMipProblem';
 import { StorageService } from '../../src/app/storage';
-import { ReMIPClient } from '../../src/connectors/remip/ReMIPClient';
+import { Logger } from 'pino';
+import { ReMIPClient } from '../../src/connectors/remip/ReMIPClient.js';
 import { Solution } from '../../src/schemas/solutions';
 
 // Mock the dependencies
 jest.mock('../../src/app/storage');
-jest.mock('../../src/connectors/remip/ReMIPClient');
+jest.mock('../../src/connectors/remip/ReMIPClient.js', () => ({
+  ReMIPClient: jest.fn().mockImplementation(() => ({
+    solve: jest.fn(),
+    on: jest.fn(),
+    removeAllListeners: jest.fn(),
+  })),
+}));
 
 describe('solveMipProblem', () => {
   let storageService: jest.Mocked<StorageService>;
@@ -17,10 +24,12 @@ describe('solveMipProblem', () => {
 
     storageService = new StorageService() as jest.Mocked<StorageService>;
     // We can provide a minimal mock implementation for ReMIPClient
-    remipClient = {
-      solve: jest.fn(),
-      on: jest.fn(),
-    } as unknown as jest.Mocked<ReMIPClient>;
+    remipClient = new ReMIPClient({
+      logger: {} as Logger,
+      baseUrl: '',
+    }) as jest.Mocked<ReMIPClient>;
+    remipClient.on = jest.fn();
+    remipClient.removeAllListeners = jest.fn();
   });
 
   it('should retrieve a problem, solve it, store the solution, and return both solutionId and solution', async () => {

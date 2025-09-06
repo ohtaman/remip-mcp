@@ -1,5 +1,5 @@
-import { Solution } from '../../schemas/solutions.js';
 import { EventEmitter } from 'node:events';
+import { Solution } from '../../schemas/solutions.js';
 import type {
   Problem,
   LogData,
