@@ -22,8 +22,11 @@ export async function getSolution(
     throw new Error(`Solution not found: ${params.solution_id}`);
   }
 
-  if (params.include_zero_variables) {
-    return solution;
+  if (!solution.variables || params.include_zero_variables) {
+    return {
+      ...solution,
+      variables: solution.variables || {},
+    };
   }
 
   const filteredVariables: Record<string, number> = {};
