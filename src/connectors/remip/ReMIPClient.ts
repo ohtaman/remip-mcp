@@ -40,7 +40,12 @@ export class ReMIPClient extends EventEmitter {
   public async solve(problem: Problem): Promise<Solution | null> {
     try {
       if (this.stream) {
-        return await this.solveWithStreaming(problem);
+        const response = await fetch(`${this.baseUrl}/solve?stream=sse`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(problem),
+        });
+        return await this.parseStreamingResponse(response);
       } else {
         return await this.solveNonStreaming(problem);
       }
@@ -74,18 +79,9 @@ export class ReMIPClient extends EventEmitter {
     return (await response.json()) as Solution;
   }
 
-  /**
-   * Solves the problem using a streaming connection (Server-Sent Events).
-   * This allows for real-time logging and progress updates from the server.
-   * @private
-   */
-  private async solveWithStreaming(problem: Problem): Promise<Solution | null> {
-    const response = await fetch(`${this.baseUrl}/solve?stream=sse`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(problem),
-    });
-
+  private async parseStreamingResponse(
+    response: Response,
+  ): Promise<Solution | null> {
     if (!response.ok || !response.body) {
       const errorBody = await response.text();
       throw new Error(

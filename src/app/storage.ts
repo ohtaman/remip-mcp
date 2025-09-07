@@ -53,7 +53,8 @@ export class StorageService {
   public listSolutions(sessionId: string): SolutionSummary[] {
     const sessionSolutions = this.getSolutionsForSession(sessionId);
     return Array.from(sessionSolutions.values()).map((solution) => {
-      const { ...summary } = solution;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { variables, ...summary } = solution;
       return summary;
     });
   }
