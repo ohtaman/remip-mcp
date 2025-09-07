@@ -122,6 +122,10 @@ export class ReMIPClient extends EventEmitter {
 
             switch (currentEvent) {
               case 'result': {
+                this.logger.info(
+                  { data },
+                  '[ReMIPClient] Received result event data',
+                );
                 // The result can be the data object itself or nested in a 'solution' field
                 const newSolution = 'solution' in data ? data.solution : data;
                 if (newSolution) {

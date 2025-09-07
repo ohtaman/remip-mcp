@@ -108,6 +108,7 @@ json.dumps(result)
     variables: solutionResult.variableValues,
   };
 
+  logger.info({ solution }, 'Saving solution object to storage');
   storageService.setSolution(sessionId, solution);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
