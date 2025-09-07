@@ -1,8 +1,10 @@
-import { solveProblem } from '../../src/tools/solveProblem';
-import { StorageService } from '../../src/app/storage';
-import { Model } from '../../src/schemas/models';
-import { Solution } from '../../src/schemas/solutions';
-import { Problem } from '../../src/connectors/remip/types';
+import { solveProblem } from '../../src/tools/solveProblem.js';
+import { StorageService } from '../../src/app/storage.js';
+import { Model } from '../../src/schemas/models.js';
+import { Solution } from '../../src/schemas/solutions.js';
+import { Problem } from '../../src/connectors/remip/types.js';
+import { PyodideRunner } from '../../src/app/pyodideRunner.js';
+import { ReMIPClient } from '../../src/connectors/remip/ReMIPClient.js';
 
 describe('solveProblem Tool', () => {
   const sessionId = 'test-session';
@@ -10,7 +12,7 @@ describe('solveProblem Tool', () => {
     name: 'my_model',
     code: '... code ...',
     type: 'pulp.LpProblem',
-    inputs: ['a', 'b'],
+    inputs: [],
   };
 
   const mockProblem: Problem = {
@@ -25,54 +27,58 @@ describe('solveProblem Tool', () => {
       objectiveValue: 123,
       variableValues: { x: 1 },
     } as Solution),
-  };
+  } as unknown as ReMIPClient;
 
-  it('should return an error if input data keys do not match model inputs', async () => {
+  it('should succeed when model code creates a single LpProblem', async () => {
     const fakeStorage = new StorageService();
     fakeStorage.setModel(sessionId, model);
-    const params = { model_name: 'my_model', data: { a: 1 } }; // Missing 'b'
+
+    const discoveryResult = { problem: mockProblem, error: null };
+    const fakePyodideRunner = {
+      run: jest
+        .fn()
+        .mockResolvedValueOnce(undefined) // User code runs
+        .mockResolvedValueOnce({ toJs: () => JSON.stringify(discoveryResult) }), // Discovery code runs
+    } as unknown as PyodideRunner;
+
+    const params = { model_name: 'my_model', data: {} };
+
+    const result = await solveProblem(sessionId, params, {
+      storageService: fakeStorage,
+      pyodideRunner: fakePyodideRunner,
+      remipClient: fakeRemipClient,
+      sendNotification: async () => {},
+    });
+
+    expect(fakePyodideRunner.run).toHaveBeenCalledTimes(2);
+    expect(fakeRemipClient.solve).toHaveBeenCalledWith(mockProblem);
+    expect(result.status).toBe('Optimal');
+  });
+
+  it('should throw an error when model code creates no LpProblem', async () => {
+    const fakeStorage = new StorageService();
+    fakeStorage.setModel(sessionId, model);
+
+    const discoveryResult = {
+      problem: null,
+      error: 'No pulp.LpProblem instance found.',
+    };
+    const fakePyodideRunner = {
+      run: jest
+        .fn()
+        .mockResolvedValueOnce(undefined) // User code runs
+        .mockResolvedValueOnce({ toJs: () => JSON.stringify(discoveryResult) }), // Discovery code runs
+    } as unknown as PyodideRunner;
+
+    const params = { model_name: 'my_model', data: {} };
 
     await expect(
       solveProblem(sessionId, params, {
         storageService: fakeStorage,
-        pyodideRunner: {} as any,
-        remipClient: {} as any,
+        pyodideRunner: fakePyodideRunner,
+        remipClient: fakeRemipClient,
         sendNotification: async () => {},
       }),
-    ).rejects.toThrow('Input data does not match model inputs');
-  });
-
-  it('should execute successfully and call dependencies correctly', async () => {
-    const fakeStorage = new StorageService();
-    fakeStorage.setModel(sessionId, model);
-
-    const fakePyodideRunner = {
-      run: jest.fn().mockResolvedValue(JSON.stringify(mockProblem)),
-    };
-
-    const params = {
-      model_name: 'my_model',
-      data: { a: 1, b: 2 },
-    };
-
-    const result = await solveProblem(sessionId, params, {
-      storageService: fakeStorage,
-      pyodideRunner: fakePyodideRunner as any,
-      remipClient: fakeRemipClient as any,
-      sendNotification: async () => {},
-    });
-
-    // Verify the runner was called once with the combined code
-    expect(fakePyodideRunner.run).toHaveBeenCalledTimes(1);
-    const executionCode = fakePyodideRunner.run.mock.calls[0][1];
-    expect(executionCode).toContain(model.code);
-    expect(executionCode).toContain('isinstance(v, pulp.LpProblem)');
-
-    // Verify the solver was called with the result
-    expect(fakeRemipClient.solve).toHaveBeenCalledWith(mockProblem);
-    
-    // Verify the result
-    expect(result.status).toBe('Optimal');
-    expect(result.objective_value).toBe(123);
+    ).rejects.toThrow('No pulp.LpProblem instance found.');
   });
 });

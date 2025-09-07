@@ -122,7 +122,7 @@ async function setupMcpServer(
     },
   );
 
-  const solveProblemHandler: any = async (
+  const solveProblemHandler = async (
     params: z.infer<typeof solveProblemSchema>,
     extra: McpExtraArgs & {
       sendNotification: (notification: {
@@ -153,7 +153,8 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'get_solution',
     {
-      description: 'Retrieves the complete, raw solution object for a given solution ID.',
+      description:
+        'Retrieves the complete, raw solution object for a given solution ID.',
       inputSchema: getSolutionSchema.shape,
     },
     async (params: z.infer<typeof getSolutionSchema>, extra: McpExtraArgs) => {
@@ -167,7 +168,8 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'process_solution',
     {
-      description: 'Processes a raw solution using a Python script for analysis.',
+      description:
+        'Processes a raw solution using a Python script for analysis.',
       inputSchema: processSolutionSchema.shape,
     },
     async (
@@ -186,9 +188,9 @@ async function setupMcpServer(
     'list_models',
     {
       description: 'Lists all models registered in the current session.',
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
-    async (params: {}, extra: McpExtraArgs) => {
+    async (params: Record<string, never>, extra: McpExtraArgs) => {
       const result = await listModels(extra.sessionId!, params, {
         storageService,
       });
@@ -213,10 +215,11 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'list_solutions',
     {
-      description: 'Lists summaries of all solutions generated in the current session.',
-      inputSchema: {},
+      description:
+        'Lists summaries of all solutions generated in the current session.',
+      inputSchema: z.object({}),
     },
-    async (params: {}, extra: McpExtraArgs) => {
+    async (params: Record<string, never>, extra: McpExtraArgs) => {
       const result = await listSolutions(extra.sessionId!, params, {
         storageService,
       });
@@ -228,9 +231,9 @@ async function setupMcpServer(
     'check_packages',
     {
       description: 'Checks if all required python packages are installed.',
-      inputSchema: {},
+      inputSchema: z.object({}),
     },
-    async (params: {}, extra: McpExtraArgs) => {
+    async (params: Record<string, never>, extra: McpExtraArgs) => {
       const result = await checkPackages(extra.sessionId!, params, {
         pyodideRunner,
       });

@@ -31,7 +31,9 @@ describe('StorageService', () => {
     });
 
     it('should return undefined for a non-existent model', () => {
-      expect(storageService.getModel(sessionId, 'non-existent')).toBeUndefined();
+      expect(
+        storageService.getModel(sessionId, 'non-existent'),
+      ).toBeUndefined();
     });
 
     it('should list all models for a session', () => {
@@ -75,7 +77,9 @@ describe('StorageService', () => {
     });
 
     it('should return undefined for a non-existent solution', () => {
-      expect(storageService.getSolution(sessionId, 'non-existent')).toBeUndefined();
+      expect(
+        storageService.getSolution(sessionId, 'non-existent'),
+      ).toBeUndefined();
     });
 
     it('should list all solution summaries for a session', () => {
@@ -83,33 +87,44 @@ describe('StorageService', () => {
       storageService.setSolution(sessionId, solution2);
       const summaries = storageService.listSolutions(sessionId);
       // Omit 'variables' for summary
-      const { variables: v1, ...summary1 } = solution1;
-      const { variables: v2, ...summary2 } = solution2;
+      const { variables: _v1, ...summary1 } = solution1;
+      const { variables: _v2, ...summary2 } = solution2;
       expect(summaries).toEqual([summary1, summary2]);
     });
 
     it('should not list solutions from other sessions', () => {
-        storageService.setSolution(sessionId, solution1);
-        storageService.setSolution('other-session', solution2);
-        const { variables: v1, ...summary1 } = solution1;
-        expect(storageService.listSolutions(sessionId)).toEqual([summary1]);
+      storageService.setSolution(sessionId, solution1);
+      storageService.setSolution('other-session', solution2);
+      const { variables: _v1, ...summary1 } = solution1;
+      expect(storageService.listSolutions(sessionId)).toEqual([summary1]);
     });
   });
 
   describe('Session Management', () => {
     it('should clear all data for a specific session', () => {
-        const model: Model = { name: 'm1', code: 'c1', type: 'pulp.LpProblem', inputs: [] };
-        const solution: SolutionObject = { solution_id: 's1', status: 'Optimal', objective_value: 1, solve_time_seconds: 1, variables: {} };
-        
-        storageService.setModel(sessionId, model);
-        storageService.setSolution(sessionId, solution);
-        storageService.setModel('other-session', model);
+      const model: Model = {
+        name: 'm1',
+        code: 'c1',
+        type: 'pulp.LpProblem',
+        inputs: [],
+      };
+      const solution: SolutionObject = {
+        solution_id: 's1',
+        status: 'Optimal',
+        objective_value: 1,
+        solve_time_seconds: 1,
+        variables: {},
+      };
 
-        storageService.clearSession(sessionId);
+      storageService.setModel(sessionId, model);
+      storageService.setSolution(sessionId, solution);
+      storageService.setModel('other-session', model);
 
-        expect(storageService.getModel(sessionId, 'm1')).toBeUndefined();
-        expect(storageService.getSolution(sessionId, 's1')).toBeUndefined();
-        expect(storageService.getModel('other-session', 'm1')).toBeDefined();
+      storageService.clearSession(sessionId);
+
+      expect(storageService.getModel(sessionId, 'm1')).toBeUndefined();
+      expect(storageService.getSolution(sessionId, 's1')).toBeUndefined();
+      expect(storageService.getModel('other-session', 'm1')).toBeDefined();
     });
   });
 });

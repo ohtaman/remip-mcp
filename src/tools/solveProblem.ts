@@ -4,6 +4,7 @@ import { PyodideRunner } from '../app/pyodideRunner.js';
 import { ReMIPClient } from '../connectors/remip/ReMIPClient.js';
 import { SolutionObject, SolutionSummary } from '../schemas/solutions.js';
 import { Problem } from '../connectors/remip/types.js';
+import { logger } from '../app/logger.js';
 
 interface SolveProblemParams {
   model_name: string;
@@ -18,6 +19,11 @@ interface SolveProblemServices {
     method: string;
     params: unknown;
   }) => Promise<void>;
+}
+
+interface DiscoveryResult {
+  problem: Problem | null;
+  error: string | null;
 }
 
 export async function solveProblem(
@@ -47,52 +53,100 @@ export async function solveProblem(
   }
 
   // --- Problem Generation ---
-  // We combine the user's code with a script to find and serialize the LpProblem
-  const executionCode = `
+  try {
+    logger.info(
+      { event: 'solve_problem.run_user_code.start' },
+      "Running user's model code",
+    );
+    await pyodideRunner.run(sessionId, model.code, {
+      globals: { data: params.data },
+    });
+    logger.info(
+      { event: 'solve_problem.run_user_code.end' },
+      "Finished running user's model code",
+    );
+
+    const discoveryCode = `
 import json
 import pulp
 
-# --- User's model code will be executed here ---
-${model.code}
-# --- End of user's model code ---
-
-# Find all LpProblem instances in the global scope
 lp_problems = [v for v in globals().values() if isinstance(v, pulp.LpProblem)]
 
+result = {"error": None, "problem": None}
 if len(lp_problems) == 1:
-    json.dumps(lp_problems[0].toDict())
+    result["problem"] = lp_problems[0].toDict()
 elif len(lp_problems) == 0:
-    raise ValueError("No pulp.LpProblem instance found in the model code.")
+    result["error"] = "No pulp.LpProblem instance found in the model code."
 else:
-    raise ValueError("Multiple pulp.LpProblem instances found. Please ensure only one is defined.")
+    result["error"] = "Multiple pulp.LpProblem instances found. Please ensure only one is defined."
+
+json.dumps(result)
 `;
+    logger.info(
+      { event: 'solve_problem.run_discovery.start' },
+      'Running discovery code',
+    );
+    const resultProxy = (await pyodideRunner.run(sessionId, discoveryCode)) as
+      | { toJs: () => string }
+      | undefined;
+    logger.info(
+      { event: 'solve_problem.run_discovery.end', result: resultProxy },
+      'Finished running discovery code',
+    );
 
-  const problemString = (await pyodideRunner.run(sessionId, executionCode, {
-    globals: { data: params.data },
-  })) as string;
+    if (!resultProxy || typeof resultProxy.toJs !== 'function') {
+      throw new Error(
+        'Could not serialize the PuLP problem from the model code.',
+      );
+    }
 
-  const problem: Problem = JSON.parse(problemString);
+    const discoveryResult = JSON.parse(resultProxy.toJs()) as DiscoveryResult;
 
-  // --- Solving ---
-  const startTime = Date.now();
-  const solutionResult = await remipClient.solve(problem);
-  const solveTime = (Date.now() - startTime) / 1000;
+    if (discoveryResult.error || !discoveryResult.problem) {
+      throw new Error(
+        discoveryResult.error || 'Unknown error during problem discovery.',
+      );
+    }
 
-  if (!solutionResult) {
-    throw new Error('Solver failed to produce a solution.');
+    const problem: Problem = discoveryResult.problem;
+
+    // --- Solving ---
+    logger.info(
+      { event: 'solve_problem.remip_solve.start' },
+      'Calling ReMIP solver',
+    );
+    const startTime = Date.now();
+    const solutionResult = await remipClient.solve(problem);
+    const solveTime = (Date.now() - startTime) / 1000;
+    logger.info(
+      { event: 'solve_problem.remip_solve.end', solveTime },
+      'ReMIP solver finished',
+    );
+
+    if (!solutionResult) {
+      throw new Error('Solver failed to produce a solution.');
+    }
+
+    const solutionId = `sol-${randomUUID()}`;
+    const solution: SolutionObject = {
+      solution_id: solutionId,
+      status: 'Optimal', // This needs to be properly mapped from solver result
+      objective_value: solutionResult.objectiveValue,
+      solve_time_seconds: solveTime,
+      variables: solutionResult.variableValues,
+    };
+
+    storageService.setSolution(sessionId, solution);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { variables: _variables, ...summary } = solution;
+    return summary;
+  } catch (error) {
+    logger.error(
+      { err: error },
+      'An error occurred during solve_problem execution.',
+    );
+    // Re-throw the error to be handled by the MCP server
+    throw error;
   }
-
-  const solutionId = `sol-${randomUUID()}`;
-  const solution: SolutionObject = {
-    solution_id: solutionId,
-    status: 'Optimal', // This needs to be properly mapped from solver result
-    objective_value: solutionResult.objectiveValue,
-    solve_time_seconds: solveTime,
-    variables: solutionResult.variableValues,
-  };
-
-  storageService.setSolution(sessionId, solution);
-
-  const { variables, ...summary } = solution;
-  return summary;
 }

@@ -3,7 +3,7 @@ import { SolutionSummary } from '../schemas/solutions.js';
 
 export async function listSolutions(
   sessionId: string,
-  params: {},
+  params: Record<string, never>,
   services: { storageService: StorageService },
 ): Promise<SolutionSummary[]> {
   return services.storageService.listSolutions(sessionId);

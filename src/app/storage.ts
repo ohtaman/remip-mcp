@@ -53,7 +53,7 @@ export class StorageService {
   public listSolutions(sessionId: string): SolutionSummary[] {
     const sessionSolutions = this.getSolutionsForSession(sessionId);
     return Array.from(sessionSolutions.values()).map((solution) => {
-      const { variables, ...summary } = solution;
+      const { ...summary } = solution;
       return summary;
     });
   }

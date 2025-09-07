@@ -6,7 +6,7 @@ interface CheckPackagesServices {
 
 export async function checkPackages(
   sessionId: string,
-  params: {},
+  params: Record<string, never>,
   services: CheckPackagesServices,
 ): Promise<{ status: string; missing: string[] }> {
   const { pyodideRunner } = services;
