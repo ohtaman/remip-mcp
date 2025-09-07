@@ -4,6 +4,7 @@ import { PyodideRunner } from '../app/pyodideRunner.js';
 import { ReMIPClient } from '../connectors/remip/ReMIPClient.js';
 import { SolutionObject, SolutionSummary } from '../schemas/solutions.js';
 import { Problem } from '../connectors/remip/types.js';
+import { logger } from '../app/logger.js';
 
 interface SolveProblemParams {
   model_name: string;
