@@ -27,6 +27,7 @@ import { listModels } from './tools/listModels.js';
 import { getModel } from './tools/getModel.js';
 import { listSolutions } from './tools/listSolutions.js';
 import { checkPackages } from './tools/checkPackages.js';
+import { getModelJson } from './tools/getModelJson.js';
 
 interface McpExtraArgs {
   sessionId?: string;
@@ -238,6 +239,20 @@ async function setupMcpServer(
         pyodideRunner,
       });
       return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    },
+  );
+
+  mcpServer.registerTool(
+    'get_model_json',
+    {
+      description: 'Gets the JSON representation of a PuLP model.',
+      inputSchema: z.object({ code: z.string() }).shape,
+    },
+    async (params: { code: string }, extra: McpExtraArgs) => {
+      const result = await getModelJson(extra.sessionId!, params, {
+        pyodideRunner,
+      });
+      return { content: [{ type: 'text', text: result }] };
     },
   );
 

@@ -121,10 +121,14 @@ export class ReMIPClient extends EventEmitter {
             const data = JSON.parse(dataStr);
 
             switch (currentEvent) {
-              case 'result':
+              case 'result': {
                 // The result can be the data object itself or nested in a 'solution' field
-                solution = 'solution' in data ? data.solution : data;
+                const newSolution = 'solution' in data ? data.solution : data;
+                if (newSolution) {
+                  solution = newSolution;
+                }
                 break;
+              }
               case 'log': {
                 const logData = data as LogData;
                 this.emit('log', logData);
