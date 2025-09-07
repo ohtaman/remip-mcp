@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+// The summary returned by solve_problem and list_solutions
+export interface SolutionSummary {
+  solution_id: string;
+  status: 'Not Solved' | 'Optimal' | 'Infeasible' | 'Unbounded' | 'Undefined';
+  objective_value: number | null;
+  solve_time_seconds: number;
+}
+
+// The full object stored on the server and returned by get_solution
+export interface SolutionObject extends SolutionSummary {
+  variables: Record<string, number>;
+}
+
 export const remipMetricSchema = z.object({
   type: z.literal("metric"),
   data: z.object({

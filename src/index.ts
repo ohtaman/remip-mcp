@@ -16,10 +16,17 @@ import { setupAppServer } from './app/httpServer.js';
 import { ReMIPClient } from './connectors/remip/ReMIPClient.js';
 import { StorageService } from './app/storage.js';
 import { PyodideRunner } from './app/pyodideRunner.js';
-import { generateMipProblem } from './tools/generateMipProblem.js';
-import { solveMipProblem } from './tools/solveMipProblem.js';
-import { processMipSolution } from './tools/processMipSolution.js';
 import { z } from 'zod';
+
+// New Tool Imports
+import { defineModel } from './tools/defineModel.js';
+import { solveProblem } from './tools/solveProblem.js';
+import { getSolution } from './tools/getSolution.js';
+import { processSolution } from './tools/processSolution.js';
+import { listModels } from './tools/listModels.js';
+import { getModel } from './tools/getModel.js';
+import { listSolutions } from './tools/listSolutions.js';
+import { checkPackages } from './tools/checkPackages.js';
 
 interface McpExtraArgs {
   sessionId?: string;
@@ -27,17 +34,30 @@ interface McpExtraArgs {
 
 const require = createRequire(import.meta.url);
 
-const generateMipProblemSchema = z.object({
-  problemDefinitionCode: z.string(),
+// Zod Schemas for New Tools
+const defineModelSchema = z.object({
+  model_name: z.string(),
+  model_code: z.string(),
+  inputs: z.array(z.string()),
 });
 
-const solveMipProblemSchema = z.object({
-  problemId: z.string(),
+const solveProblemSchema = z.object({
+  model_name: z.string(),
+  data: z.record(z.unknown()),
 });
 
-const processMipSolutionSchema = z.object({
-  solutionId: z.string(),
-  validationCode: z.string(),
+const getSolutionSchema = z.object({
+  solution_id: z.string(),
+  include_zero_variables: z.boolean().optional().default(false),
+});
+
+const processSolutionSchema = z.object({
+  solution_id: z.string(),
+  processing_code: z.string(),
+});
+
+const getModelSchema = z.object({
+  model_name: z.string(),
 });
 
 function installProcessHandlers() {
@@ -86,92 +106,139 @@ async function setupMcpServer(
     },
   );
 
-  mcpServer.registerTool(
-    'generate_mip_problem',
-    {
-      description:
-        "Generates a Mixed-Integer Programming (MIP) problem from a Python script using the PuLP library.\n\n**Constraint:** The script must create **exactly one** instance of a `pulp.LpProblem` object in the global scope. The name of the variable does not matter, but there must be only one.\n\nThe tool executes the script, finds the single `LpProblem` object, serializes it, and stores it. It returns a unique `problemId` for the stored problem, along with any output from the script's stdout and stderr streams.",
-      inputSchema: generateMipProblemSchema.shape,
-    },
-    async (
-      params: z.infer<typeof generateMipProblemSchema>,
-      extra: McpExtraArgs,
-    ) => {
-      const sessionId = extra.sessionId!;
-      try {
-        const result = await generateMipProblem(sessionId, params, {
-          pyodideRunner,
-          storageService,
-        });
-        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
-      } finally {
-        pyodideRunner.cleanup(sessionId);
-        logger.info(
-          { event: 'pyodide_cleanup', sessionId },
-          'Pyodide instance cleaned up.',
-        );
-      }
-    },
-  );
-  logger.info('Registered method: generate_mip_problem');
+  // --- Register New Tools ---
 
   mcpServer.registerTool(
-    'solve_mip_problem',
+    'define_model',
     {
-      description:
-        'Solves a previously generated Mixed-Integer Programming (MIP) problem. It retrieves the problem definition using the provided problem ID and submits it to a ReMIP (Remote MIP) solver. The tool streams logs and metrics from the solver and returns the final solution along with a unique solution ID.',
-      inputSchema: solveMipProblemSchema.shape,
+      description: 'Defines or updates a reusable optimization model template.',
+      inputSchema: defineModelSchema.shape,
     },
-    // @ts-expect-error - The McpServer's inferred type for sendNotification is highly specific and
-    // difficult to satisfy without making the tool's code overly complex. The runtime behavior is correct.
-    async (
-      params: z.infer<typeof solveMipProblemSchema>,
-      extra: McpExtraArgs & {
-        sendNotification: (notification: {
-          method: string;
-          params: unknown;
-        }) => Promise<void>;
-      },
-    ) => {
-      const sessionId = extra.sessionId!;
-      const result = await solveMipProblem(sessionId, params, {
+    async (params: z.infer<typeof defineModelSchema>, extra: McpExtraArgs) => {
+      const result = await defineModel(extra.sessionId!, params, {
         storageService,
-        remipClient,
-        sendNotification: extra.sendNotification,
       });
       return { content: [{ type: 'text', text: JSON.stringify(result) }] };
     },
   );
-  logger.info('Registered method: solve_mip_problem');
+
+  const solveProblemHandler: any = async (
+    params: z.infer<typeof solveProblemSchema>,
+    extra: McpExtraArgs & {
+      sendNotification: (notification: {
+        method: string;
+        params: unknown;
+      }) => Promise<void>;
+    },
+  ) => {
+    const result = await solveProblem(extra.sessionId!, params, {
+      storageService,
+      remipClient,
+      pyodideRunner,
+      sendNotification: extra.sendNotification,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+  };
 
   mcpServer.registerTool(
-    'process_mip_solution',
+    'solve_problem',
     {
       description:
-        "Processes a MIP solution using a Python script for validation or analysis. This tool retrieves a stored solution and executes the provided Python code. The solution data is injected into the script's global scope as a variable named `solution`. The tool returns a status message, along with any output from the script's stdout and stderr streams.",
-      inputSchema: processMipSolutionSchema.shape,
+        'Executes an optimization run using a pre-defined model and specific input data.',
+      inputSchema: solveProblemSchema.shape,
     },
-    async (
-      params: z.infer<typeof processMipSolutionSchema>,
-      extra: McpExtraArgs,
-    ) => {
-      const sessionId = extra.sessionId!;
-      try {
-        const result = await processMipSolution(sessionId, params, {
-          pyodideRunner,
-          storageService,
-        });
-        return { content: [{ type: 'text', text: JSON.stringify(result) }] };
-      } finally {
-        pyodideRunner.cleanup(sessionId);
-        logger.info(
-          { event: 'pyodide_cleanup', sessionId },
-          'Pyodide instance cleaned up.',
-        );
-      }
+    solveProblemHandler,
+  );
+
+  mcpServer.registerTool(
+    'get_solution',
+    {
+      description: 'Retrieves the complete, raw solution object for a given solution ID.',
+      inputSchema: getSolutionSchema.shape,
+    },
+    async (params: z.infer<typeof getSolutionSchema>, extra: McpExtraArgs) => {
+      const result = await getSolution(extra.sessionId!, params, {
+        storageService,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
     },
   );
-  logger.info('Registered method: process_mip_solution');
+
+  mcpServer.registerTool(
+    'process_solution',
+    {
+      description: 'Processes a raw solution using a Python script for analysis.',
+      inputSchema: processSolutionSchema.shape,
+    },
+    async (
+      params: z.infer<typeof processSolutionSchema>,
+      extra: McpExtraArgs,
+    ) => {
+      const result = await processSolution(extra.sessionId!, params, {
+        storageService,
+        pyodideRunner,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    },
+  );
+
+  mcpServer.registerTool(
+    'list_models',
+    {
+      description: 'Lists all models registered in the current session.',
+      inputSchema: {},
+    },
+    async (params: {}, extra: McpExtraArgs) => {
+      const result = await listModels(extra.sessionId!, params, {
+        storageService,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    },
+  );
+
+  mcpServer.registerTool(
+    'get_model',
+    {
+      description: 'Retrieves the source code for a registered model.',
+      inputSchema: getModelSchema.shape,
+    },
+    async (params: z.infer<typeof getModelSchema>, extra: McpExtraArgs) => {
+      const result = await getModel(extra.sessionId!, params, {
+        storageService,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    },
+  );
+
+  mcpServer.registerTool(
+    'list_solutions',
+    {
+      description: 'Lists summaries of all solutions generated in the current session.',
+      inputSchema: {},
+    },
+    async (params: {}, extra: McpExtraArgs) => {
+      const result = await listSolutions(extra.sessionId!, params, {
+        storageService,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    },
+  );
+
+  mcpServer.registerTool(
+    'check_packages',
+    {
+      description: 'Checks if all required python packages are installed.',
+      inputSchema: {},
+    },
+    async (params: {}, extra: McpExtraArgs) => {
+      const result = await checkPackages(extra.sessionId!, params, {
+        pyodideRunner,
+      });
+      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    },
+  );
+
+  logger.info('Registered all new tools.');
 
   await mcpServer.connect(transport);
   return mcpServer;
@@ -212,13 +279,15 @@ async function main() {
   logger.info({ event: 'server_start', config }, 'Starting MCP Server.');
 
   const storageService = new StorageService();
-  // In production, files are in `dist`, and we copy pyodide to `dist/pyodide`.
-  // In development, `ts-node` runs from the root, so we resolve from `node_modules`.
   const isProd = !import.meta.url.startsWith('file://');
   const pyodidePath = isProd
     ? path.join(path.dirname(import.meta.url), 'pyodide')
     : path.dirname(require.resolve('pyodide/package.json'));
-  const pyodideRunner = new PyodideRunner(pyodidePath, config.pyodidePackages);
+  const pyodideRunner = new PyodideRunner(
+    pyodidePath,
+    config.pyodidePackages,
+    config.micropipPackages,
+  );
 
   if (config.http) {
     const mcpSessionFactory = async (

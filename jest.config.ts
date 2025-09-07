@@ -6,6 +6,9 @@ const config: Config = {
   testMatch: [
     '**/tests/**/*.test.ts'
   ],
+  testPathIgnorePatterns: [
+    '<rootDir>/tests/e2e/'
+  ],
   moduleFileExtensions: [
     'ts',
     'js',

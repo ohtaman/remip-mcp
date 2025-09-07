@@ -1,25 +1,29 @@
 import { loadPyodide, PyodideInterface } from 'pyodide';
 
-export interface PyodideExecutionResult {
-  stdout: string;
-  stderr: string;
-  result: unknown;
-}
-
 interface PyodideInstance {
   pyodide: PyodideInterface;
   stdout: string[];
   stderr: string[];
 }
 
+interface RunOptions {
+  globals?: Record<string, unknown>;
+}
+
 export class PyodideRunner {
   private pyodideInstances: Map<string, PyodideInstance> = new Map();
   private packages: string[];
+  private micropipPackages: string[];
   private indexURL: string;
 
-  constructor(indexURL: string, packages: string[] = []) {
+  constructor(
+    indexURL: string,
+    packages: string[] = [],
+    micropipPackages: string[] = [],
+  ) {
     this.indexURL = indexURL;
     this.packages = packages;
+    this.micropipPackages = micropipPackages;
   }
 
   public async getPyodide(sessionId: string): Promise<PyodideInterface> {
@@ -39,8 +43,28 @@ export class PyodideRunner {
       await pyodide.loadPackage(this.packages);
     }
 
+    if (this.micropipPackages.length > 0) {
+      await pyodide.loadPackage('micropip');
+      const micropip = pyodide.pyimport('micropip');
+      await micropip.install(this.micropipPackages);
+    }
+
     this.pyodideInstances.set(sessionId, { pyodide, stdout, stderr });
     return pyodide;
+  }
+
+  public async run(
+    sessionId: string,
+    code: string,
+    options: RunOptions = {},
+  ): Promise<unknown> {
+    const pyodide = await this.getPyodide(sessionId);
+    if (options.globals) {
+      for (const [key, value] of Object.entries(options.globals)) {
+        pyodide.globals.set(key, value);
+      }
+    }
+    return await pyodide.runPythonAsync(code);
   }
 
   public getOutput(sessionId: string): { stdout: string; stderr: string } {
