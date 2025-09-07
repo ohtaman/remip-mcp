@@ -188,7 +188,7 @@ async function setupMcpServer(
     'list_models',
     {
       description: 'Lists all models registered in the current session.',
-      inputSchema: z.object({}),
+      inputSchema: z.object({}).shape,
     },
     async (params: Record<string, never>, extra: McpExtraArgs) => {
       const result = await listModels(extra.sessionId!, params, {
@@ -217,7 +217,7 @@ async function setupMcpServer(
     {
       description:
         'Lists summaries of all solutions generated in the current session.',
-      inputSchema: z.object({}),
+      inputSchema: z.object({}).shape,
     },
     async (params: Record<string, never>, extra: McpExtraArgs) => {
       const result = await listSolutions(extra.sessionId!, params, {
@@ -231,7 +231,7 @@ async function setupMcpServer(
     'check_packages',
     {
       description: 'Checks if all required python packages are installed.',
-      inputSchema: z.object({}),
+      inputSchema: z.object({}).shape,
     },
     async (params: Record<string, never>, extra: McpExtraArgs) => {
       const result = await checkPackages(extra.sessionId!, params, {
