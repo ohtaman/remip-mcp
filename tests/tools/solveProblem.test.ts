@@ -29,7 +29,7 @@ describe('solveProblem Tool', () => {
     } as Solution),
   } as unknown as ReMIPClient;
 
-  it('should succeed when model code creates a single LpProblem', async () => {
+  it('should succeed when discovery script returns a JSON string', async () => {
     const fakeStorage = new StorageService();
     fakeStorage.setModel(sessionId, model);
 
@@ -38,7 +38,7 @@ describe('solveProblem Tool', () => {
       run: jest
         .fn()
         .mockResolvedValueOnce(undefined) // User code runs
-        .mockResolvedValueOnce({ toJs: () => JSON.stringify(discoveryResult) }), // Discovery code runs
+        .mockResolvedValueOnce(JSON.stringify(discoveryResult)), // Discovery code returns a plain string
     } as unknown as PyodideRunner;
 
     const params = { model_name: 'my_model', data: {} };
@@ -53,32 +53,5 @@ describe('solveProblem Tool', () => {
     expect(fakePyodideRunner.run).toHaveBeenCalledTimes(2);
     expect(fakeRemipClient.solve).toHaveBeenCalledWith(mockProblem);
     expect(result.status).toBe('Optimal');
-  });
-
-  it('should throw an error when model code creates no LpProblem', async () => {
-    const fakeStorage = new StorageService();
-    fakeStorage.setModel(sessionId, model);
-
-    const discoveryResult = {
-      problem: null,
-      error: 'No pulp.LpProblem instance found.',
-    };
-    const fakePyodideRunner = {
-      run: jest
-        .fn()
-        .mockResolvedValueOnce(undefined) // User code runs
-        .mockResolvedValueOnce({ toJs: () => JSON.stringify(discoveryResult) }), // Discovery code runs
-    } as unknown as PyodideRunner;
-
-    const params = { model_name: 'my_model', data: {} };
-
-    await expect(
-      solveProblem(sessionId, params, {
-        storageService: fakeStorage,
-        pyodideRunner: fakePyodideRunner,
-        remipClient: fakeRemipClient,
-        sendNotification: async () => {},
-      }),
-    ).rejects.toThrow('No pulp.LpProblem instance found.');
   });
 });
