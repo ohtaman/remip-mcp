@@ -8,7 +8,7 @@ describe('getSolution Tool', () => {
 
   const solution: SolutionObject = {
     solution_id: 'sol1',
-    status: 'Optimal',
+    status: 'optimal',
     objective_value: 100,
     solve_time_seconds: 1,
     variables: { x: 1, y: 0, z: 5 },
@@ -68,7 +68,7 @@ describe('getSolution Tool', () => {
   it('should handle solutions with null objective and no variables', async () => {
     const infeasibleSolution: SolutionObject = {
       solution_id: 'sol2',
-      status: 'Infeasible',
+      status: 'infeasible',
       objective_value: null,
       solve_time_seconds: 1,
       variables: null as any, // Simulate no variables

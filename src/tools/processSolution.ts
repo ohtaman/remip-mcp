@@ -6,6 +6,12 @@ interface ProcessSolutionParams {
   processing_code: string;
 }
 
+interface ProcessSolutionOutputs {
+  result: string;
+  stdout: string;
+  stderr: string;
+}
+
 interface ProcessSolutionServices {
   storageService: StorageService;
   pyodideRunner: PyodideRunner;
@@ -15,7 +21,7 @@ export async function processSolution(
   sessionId: string,
   params: ProcessSolutionParams,
   services: ProcessSolutionServices,
-): Promise<string> {
+): Promise<ProcessSolutionOutputs> {
   const { storageService, pyodideRunner } = services;
   const solution = storageService.getSolution(sessionId, params.solution_id);
 
@@ -34,15 +40,11 @@ ${params.processing_code}
 `;
 
   const result = await pyodideRunner.run(sessionId, fullCode);
+  const { stdout, stderr } = pyodideRunner.getOutput(sessionId);
 
-  if (result !== null && result !== undefined) {
-    return String(result);
-  }
-
-  const { stdout } = pyodideRunner.getOutput(sessionId);
-  if (stdout) {
-    return stdout;
-  }
-
-  return 'Code executed successfully with no output.';
+  return {
+    result: String(result),
+    stdout: stdout,
+    stderr: stderr,
+  };
 }

@@ -17,7 +17,7 @@ describe('Auxiliary Tools', () => {
   };
   const solution1: SolutionObject = {
     solution_id: 's1',
-    status: 'Optimal',
+    status: 'optimal',
     objective_value: 1,
     solve_time_seconds: 1,
     variables: { x: 1 },

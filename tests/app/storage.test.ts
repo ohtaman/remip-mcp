@@ -57,14 +57,14 @@ describe('StorageService', () => {
   describe('Solutions', () => {
     const solution1: SolutionObject = {
       solution_id: 'sol1',
-      status: 'Optimal',
+      status: 'optimal',
       objective_value: 100,
       solve_time_seconds: 1.0,
       variables: { x: 1 },
     };
     const solution2: SolutionObject = {
       solution_id: 'sol2',
-      status: 'Infeasible',
+      status: 'infeasible',
       objective_value: null,
       solve_time_seconds: 2.0,
       variables: {},
@@ -110,7 +110,7 @@ describe('StorageService', () => {
       };
       const solution: SolutionObject = {
         solution_id: 's1',
-        status: 'Optimal',
+        status: 'optimal',
         objective_value: 1,
         solve_time_seconds: 1,
         variables: {},

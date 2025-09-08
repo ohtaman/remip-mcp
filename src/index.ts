@@ -26,8 +26,17 @@ import { processSolution } from './tools/processSolution.js';
 import { listModels } from './tools/listModels.js';
 import { getModel } from './tools/getModel.js';
 import { listSolutions } from './tools/listSolutions.js';
-import { checkPackages } from './tools/checkPackages.js';
 import { getModelJson } from './tools/getModelJson.js';
+import {
+  defineModelOutputSchema,
+  getModelJsonOutputSchema,
+  getModelOutputSchema,
+  getSolutionOutputSchema,
+  listModelsOutputSchema,
+  listSolutionsOutputSchema,
+  processSolutionOutputSchema,
+  solveProblemOutputSchema,
+} from './schemas/toolSchemas.js';
 
 interface McpExtraArgs {
   sessionId?: string;
@@ -114,12 +123,17 @@ async function setupMcpServer(
     {
       description: 'Defines or updates a reusable optimization model template.',
       inputSchema: defineModelSchema.shape,
+      outputSchema: defineModelOutputSchema.shape,
     },
     async (params: z.infer<typeof defineModelSchema>, extra: McpExtraArgs) => {
       const result = await defineModel(extra.sessionId!, params, {
         storageService,
       });
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result) }],
+        structuredContent: result,
+      };
     },
   );
 
@@ -143,7 +157,13 @@ async function setupMcpServer(
       pyodideRunner,
       sendNotification: extra.sendNotification,
     });
-    return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+    const structuredContent = {
+      summary: result,
+    };
+    return {
+      content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
+      structuredContent,
+    };
   };
 
   mcpServer.registerTool(
@@ -152,6 +172,7 @@ async function setupMcpServer(
       description:
         'Executes an optimization run using a pre-defined model and specific input data.',
       inputSchema: solveProblemSchema.shape,
+      outputSchema: solveProblemOutputSchema.shape,
     },
     solveProblemHandler,
   );
@@ -162,12 +183,19 @@ async function setupMcpServer(
       description:
         'Retrieves the complete, raw solution object for a given solution ID.',
       inputSchema: getSolutionSchema.shape,
+      outputSchema: getSolutionOutputSchema.shape,
     },
     async (params: z.infer<typeof getSolutionSchema>, extra: McpExtraArgs) => {
       const result = await getSolution(extra.sessionId!, params, {
         storageService,
       });
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      const structuredContent = {
+        solution: result,
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
+        structuredContent,
+      };
     },
   );
 
@@ -177,6 +205,7 @@ async function setupMcpServer(
       description:
         'Processes a solution using a Python script. The solution object is available as a native Python dictionary named `solution`.',
       inputSchema: processSolutionSchema.shape,
+      outputSchema: processSolutionOutputSchema.shape,
     },
     async (
       params: z.infer<typeof processSolutionSchema>,
@@ -186,7 +215,10 @@ async function setupMcpServer(
         storageService,
         pyodideRunner,
       });
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result) }],
+        result,
+      };
     },
   );
 
@@ -195,12 +227,19 @@ async function setupMcpServer(
     {
       description: 'Lists all models registered in the current session.',
       inputSchema: z.object({}).shape,
+      outputSchema: listModelsOutputSchema.shape,
     },
     async (params: Record<string, never>, extra: McpExtraArgs) => {
       const result = await listModels(extra.sessionId!, params, {
         storageService,
       });
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      const structuredContent = {
+        models: result,
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
+        structuredContent,
+      };
     },
   );
 
@@ -209,12 +248,16 @@ async function setupMcpServer(
     {
       description: 'Retrieves the source code for a registered model.',
       inputSchema: getModelSchema.shape,
+      outputSchema: getModelOutputSchema.shape,
     },
     async (params: z.infer<typeof getModelSchema>, extra: McpExtraArgs) => {
       const result = await getModel(extra.sessionId!, params, {
         storageService,
       });
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(result) }],
+        result,
+      };
     },
   );
 
@@ -224,26 +267,19 @@ async function setupMcpServer(
       description:
         'Lists summaries of all solutions generated in the current session.',
       inputSchema: z.object({}).shape,
+      outputSchema: listSolutionsOutputSchema.shape,
     },
     async (params: Record<string, never>, extra: McpExtraArgs) => {
       const result = await listSolutions(extra.sessionId!, params, {
         storageService,
       });
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
-    },
-  );
-
-  mcpServer.registerTool(
-    'check_packages',
-    {
-      description: 'Checks if all required python packages are installed.',
-      inputSchema: z.object({}).shape,
-    },
-    async (params: Record<string, never>, extra: McpExtraArgs) => {
-      const result = await checkPackages(extra.sessionId!, params, {
-        pyodideRunner,
-      });
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] };
+      const structuredContent = {
+        solutions: result,
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
+        structuredContent,
+      };
     },
   );
 
@@ -252,12 +288,19 @@ async function setupMcpServer(
     {
       description: 'Gets the JSON representation of a PuLP model.',
       inputSchema: z.object({ code: z.string() }).shape,
+      outputSchema: getModelJsonOutputSchema.shape,
     },
     async (params: { code: string }, extra: McpExtraArgs) => {
       const result = await getModelJson(extra.sessionId!, params, {
         pyodideRunner,
       });
-      return { content: [{ type: 'text', text: result }] };
+      const structuredContent = {
+        model_json: result,
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
+        structuredContent,
+      };
     },
   );
 
