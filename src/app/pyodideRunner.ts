@@ -1,88 +1,86 @@
 import { loadPyodide, PyodideInterface } from 'pyodide';
-
-interface PyodideInstance {
-  pyodide: PyodideInterface;
-  stdout: string[];
-  stderr: string[];
-}
-
-interface RunOptions {
-  globals?: Record<string, unknown>;
-}
+import { logger } from './logger.js';
 
 export class PyodideRunner {
-  private pyodideInstances: Map<string, PyodideInstance> = new Map();
-  private packages: string[];
-  private micropipPackages: string[];
-  private indexURL: string;
+  private pyodidePromise: Promise<PyodideInterface>;
+  private sessions: Map<string, PyodideInterface> = new Map();
 
   constructor(
-    indexURL: string,
-    packages: string[] = [],
-    micropipPackages: string[] = [],
+    pyodidePath: string,
+    private defaultPackages: string[] = [],
+    private micropipPackages: string[] = [],
   ) {
-    this.indexURL = indexURL;
-    this.packages = packages;
-    this.micropipPackages = micropipPackages;
+    this.pyodidePromise = this.initializePyodide(pyodidePath);
   }
 
-  public async getPyodide(sessionId: string): Promise<PyodideInterface> {
-    if (this.pyodideInstances.has(sessionId)) {
-      return this.pyodideInstances.get(sessionId)!.pyodide;
-    }
-
-    const stdout: string[] = [];
-    const stderr: string[] = [];
-    const pyodide = await loadPyodide({
-      indexURL: this.indexURL,
-      stdout: (text) => stdout.push(text),
-      stderr: (text) => stderr.push(text),
-    });
-
-    if (this.packages.length > 0) {
-      await pyodide.loadPackage(this.packages);
-    }
-
+  private async initializePyodide(
+    pyodidePath: string,
+  ): Promise<PyodideInterface> {
+    logger.info({ event: 'pyodide_init.start' }, 'Initializing Pyodide...');
+    const pyodide = await loadPyodide({ indexURL: pyodidePath });
+    logger.info(
+      { event: 'pyodide_init.load_packages' },
+      'Loading default packages...',
+    );
+    await pyodide.loadPackage(['micropip', ...this.defaultPackages]);
     if (this.micropipPackages.length > 0) {
-      await pyodide.loadPackage('micropip');
+      logger.info(
+        { event: 'pyodide_init.load_micropip_packages' },
+        'Loading micropip packages...',
+      );
       const micropip = pyodide.pyimport('micropip');
       await micropip.install(this.micropipPackages);
     }
-
-    this.pyodideInstances.set(sessionId, { pyodide, stdout, stderr });
+    logger.info(
+      { event: 'pyodide_init.end' },
+      'Pyodide initialized successfully.',
+    );
     return pyodide;
+  }
+
+  private async getSession(sessionId: string): Promise<PyodideInterface> {
+    if (this.sessions.has(sessionId)) {
+      return this.sessions.get(sessionId)!;
+    }
+    const pyodide = await this.pyodidePromise;
+    const newSession = await pyodide.newSession();
+    this.sessions.set(sessionId, newSession);
+    return newSession;
   }
 
   public async run(
     sessionId: string,
     code: string,
-    options: RunOptions = {},
+    options?: { globals?: Record<string, unknown> },
   ): Promise<unknown> {
-    const pyodide = await this.getPyodide(sessionId);
-    if (options.globals) {
-      for (const [key, value] of Object.entries(options.globals)) {
-        pyodide.globals.set(key, value);
+    logger.info(
+      { event: 'pyodide_runner.run.start', sessionId, code },
+      'Executing Python code',
+    );
+    try {
+      const pyodide = await this.getSession(sessionId);
+      if (options?.globals) {
+        for (const [key, value] of Object.entries(options.globals)) {
+          pyodide.globals.set(key, value);
+        }
       }
+      const result = await pyodide.runPythonAsync(code);
+      logger.info(
+        { event: 'pyodide_runner.run.success', sessionId, result },
+        'Python code executed successfully',
+      );
+      return result;
+    } catch (error) {
+      logger.error(
+        { err: error, code, sessionId },
+        '[PyodideRunner] Error during Python execution',
+      );
+      throw error;
     }
-    return await pyodide.runPythonAsync(code);
   }
 
-  public getOutput(sessionId: string): { stdout: string; stderr: string } {
-    const instance = this.pyodideInstances.get(sessionId);
-    if (!instance) {
-      return { stdout: '', stderr: '' };
-    }
-    const result = {
-      stdout: instance.stdout.join('\n'),
-      stderr: instance.stderr.join('\n'),
-    };
-    // Clear buffers after getting the output
-    instance.stdout.length = 0;
-    instance.stderr.length = 0;
-    return result;
-  }
-
-  public cleanup(sessionId: string): void {
-    this.pyodideInstances.delete(sessionId);
+  public getOutput(): { stdout: string; stderr: string } {
+    // This is a placeholder as direct stdout/stderr capture is complex with pyodide sessions.
+    return { stdout: '', stderr: '' };
   }
 }

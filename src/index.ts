@@ -132,6 +132,10 @@ async function setupMcpServer(
       }) => Promise<void>;
     },
   ) => {
+    logger.info(
+      { event: 'solve_problem_handler.start', params },
+      'Received solve_problem request',
+    );
     const result = await solveProblem(extra.sessionId!, params, {
       storageService,
       remipClient,
