@@ -15,7 +15,7 @@ export async function processSolution(
   sessionId: string,
   params: ProcessSolutionParams,
   services: ProcessSolutionServices,
-): Promise<unknown> {
+): Promise<string> {
   const { storageService, pyodideRunner } = services;
   const solution = storageService.getSolution(sessionId, params.solution_id);
 
@@ -23,7 +23,18 @@ export async function processSolution(
     throw new Error(`Solution not found: ${params.solution_id}`);
   }
 
-  return await pyodideRunner.run(sessionId, params.processing_code, {
+  const result = await pyodideRunner.run(sessionId, params.processing_code, {
     globals: { solution: solution },
   });
+
+  if (result !== null && result !== undefined) {
+    return String(result);
+  }
+
+  const { stdout } = pyodideRunner.getOutput(sessionId);
+  if (stdout) {
+    return stdout;
+  }
+
+  return 'Code executed successfully with no output.';
 }

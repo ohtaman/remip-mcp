@@ -2,8 +2,9 @@ import { loadPyodide, PyodideInterface } from 'pyodide';
 import { logger } from './logger.js';
 
 export class PyodideRunner {
-  // Store a separate Pyodide instance promise for each session
   private sessionInstances: Map<string, Promise<PyodideInterface>> = new Map();
+  private stdoutBuffer: Map<string, string> = new Map();
+  private stderrBuffer: Map<string, string> = new Map();
 
   constructor(
     private pyodidePath: string,
@@ -11,7 +12,7 @@ export class PyodideRunner {
     private micropipPackages: string[] = [],
   ) {}
 
-  private initializeNewInstance(): Promise<PyodideInterface> {
+  private initializeNewInstance(sessionId: string): Promise<PyodideInterface> {
     logger.info(
       { event: 'pyodide_init.start' },
       'Initializing new Pyodide instance...',
@@ -20,6 +21,21 @@ export class PyodideRunner {
       (async () => {
         try {
           const pyodide = await loadPyodide({ indexURL: this.pyodidePath });
+          pyodide.setStdout({
+            batched: (str) =>
+              this.stdoutBuffer.set(
+                sessionId,
+                (this.stdoutBuffer.get(sessionId) || '') + str + '\n',
+              ),
+          });
+          pyodide.setStderr({
+            batched: (str) =>
+              this.stderrBuffer.set(
+                sessionId,
+                (this.stderrBuffer.get(sessionId) || '') + str + '\n',
+              ),
+          });
+
           logger.info(
             { event: 'pyodide_init.load_packages' },
             'Loading default packages...',
@@ -47,8 +63,10 @@ export class PyodideRunner {
 
   private getSessionInstance(sessionId: string): Promise<PyodideInterface> {
     if (!this.sessionInstances.has(sessionId)) {
-      // If no instance exists for this session, create a new one.
-      this.sessionInstances.set(sessionId, this.initializeNewInstance());
+      this.sessionInstances.set(
+        sessionId,
+        this.initializeNewInstance(sessionId),
+      );
     }
     return this.sessionInstances.get(sessionId)!;
   }
@@ -62,18 +80,16 @@ export class PyodideRunner {
       { event: 'pyodide_runner.run.start', sessionId },
       'Executing Python code in session',
     );
+    this.stdoutBuffer.set(sessionId, ''); // Clear buffers before run
+    this.stderrBuffer.set(sessionId, '');
     try {
       const pyodide = await this.getSessionInstance(sessionId);
-
-      // While each session has its own runtime, we still create a fresh dict
-      // for globals to be extra safe and prevent leaks between calls within the same session.
       const globals = pyodide.globals.get('dict')();
       if (options?.globals) {
         for (const [key, value] of Object.entries(options.globals)) {
           globals.set(key, value);
         }
       }
-
       const result = await pyodide.runPythonAsync(code, { globals });
       logger.info(
         { event: 'pyodide_runner.run.success', sessionId },
@@ -89,7 +105,10 @@ export class PyodideRunner {
     }
   }
 
-  public getOutput(): { stdout: string; stderr: string } {
-    return { stdout: '', stderr: '' };
+  public getOutput(sessionId: string): { stdout: string; stderr: string } {
+    return {
+      stdout: this.stdoutBuffer.get(sessionId) || '',
+      stderr: this.stderrBuffer.get(sessionId) || '',
+    };
   }
 }
