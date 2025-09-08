@@ -56,6 +56,15 @@ describe('getSolution Tool', () => {
     expect(result.variables).toEqual({ x: 1, y: 0, z: 5 });
   });
 
+  it('should return non-zero variables when include_zero_variables is false', async () => {
+    const result = await getSolution(
+      sessionId,
+      { solution_id: 'sol1', include_zero_variables: false },
+      { storageService },
+    );
+    expect(result.variables).toEqual({ x: 1, z: 5 });
+  });
+
   it('should handle solutions with null objective and no variables', async () => {
     const infeasibleSolution: SolutionObject = {
       solution_id: 'sol2',

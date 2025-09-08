@@ -22,7 +22,7 @@ export async function getSolution(
     throw new Error(`Solution not found: ${params.solution_id}`);
   }
 
-  if (!solution.variables || params.include_zero_variables) {
+  if (params.include_zero_variables) {
     return {
       ...solution,
       variables: solution.variables || {},
@@ -30,9 +30,11 @@ export async function getSolution(
   }
 
   const filteredVariables: Record<string, number> = {};
-  for (const [key, value] of Object.entries(solution.variables)) {
-    if (value !== 0) {
-      filteredVariables[key] = value as number;
+  if (solution.variables) {
+    for (const [key, value] of Object.entries(solution.variables)) {
+      if (value !== 0) {
+        filteredVariables[key] = value as number;
+      }
     }
   }
 
