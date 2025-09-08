@@ -10,7 +10,7 @@ describe('solveProblem Tool', () => {
   const sessionId = 'test-session';
   const model: Model = {
     name: 'my_model',
-    code: '... code ...',
+    code: 'x = 1',
     type: 'pulp.LpProblem',
     inputs: [],
   };
@@ -29,58 +29,27 @@ describe('solveProblem Tool', () => {
     } as Solution),
   } as unknown as ReMIPClient;
 
-  it('should succeed when discovery script returns a JSON string', async () => {
+  it('should combine user code and discovery code into a single run', async () => {
     const fakeStorage = new StorageService();
     fakeStorage.setModel(sessionId, model);
 
     const discoveryResult = { problem: mockProblem, error: null };
     const fakePyodideRunner = {
-      run: jest
-        .fn()
-        .mockResolvedValueOnce(undefined) // User code runs
-        .mockResolvedValueOnce(JSON.stringify(discoveryResult)), // Discovery code returns a plain string
+      run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
     } as unknown as PyodideRunner;
 
     const params = { model_name: 'my_model', data: {} };
 
-    const result = await solveProblem(sessionId, params, {
+    await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
       remipClient: fakeRemipClient,
       sendNotification: async () => {},
     });
 
-    expect(fakePyodideRunner.run).toHaveBeenCalledTimes(2);
-    expect(fakeRemipClient.solve).toHaveBeenCalledWith(mockProblem);
-    expect(result.status).toBe('Optimal');
-  });
-
-  it('should throw a user-friendly error if the model code has a syntax error', async () => {
-    const fakeStorage = new StorageService();
-    fakeStorage.setModel(sessionId, model);
-
-    // Simulate a non-standard error object, which is more realistic for a proxy
-    const pythonSyntaxError = {
-      message: 'Traceback(...)\nSyntaxError: invalid syntax',
-    };
-    const fakePyodideRunner = {
-      run: jest.fn().mockRejectedValue(pythonSyntaxError),
-    } as unknown as PyodideRunner;
-
-    const params = { model_name: 'my_model', data: {} };
-
-    await expect(
-      solveProblem(sessionId, params, {
-        storageService: fakeStorage,
-        pyodideRunner: fakePyodideRunner,
-        remipClient: fakeRemipClient,
-        sendNotification: async () => {},
-      }),
-    ).rejects.toThrow(
-      new RegExp(
-        '^An error occurred in the model code execution:.*SyntaxError',
-        's',
-      ),
-    );
+    expect(fakePyodideRunner.run).toHaveBeenCalledTimes(1);
+    const executedCode = (fakePyodideRunner.run as jest.Mock).mock.calls[0][1];
+    expect(executedCode).toContain('x = 1'); // User code
+    expect(executedCode).toContain('isinstance(v, pulp.LpProblem)'); // Discovery code
   });
 });

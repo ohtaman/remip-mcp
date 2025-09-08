@@ -51,10 +51,71 @@ export async function solveProblem(
     );
   }
 
+  const executionCode = `
+# --- User's Model Code ---
+${model.code}
+
+# --- Discovery Code ---
+import json
+import pulp
+
+lp_problems = [v for v in globals().values() if isinstance(v, pulp.LpProblem)]
+
+result = {"error": None, "problem": None}
+if len(lp_problems) == 1:
+    result["problem"] = lp_problems[0].toDict()
+elif len(lp_problems) == 0:
+    result["error"] = "No pulp.LpProblem instance found in the model code."
+else:
+    result["error"] = "Multiple pulp.LpProblem instances found. Please ensure only one is defined."
+
+json.dumps(result)
+`;
+
   try {
-    await pyodideRunner.run(sessionId, model.code, {
+    const result = await pyodideRunner.run(sessionId, executionCode, {
       globals: { data: params.data },
     });
+
+    if (typeof result !== 'string') {
+      throw new Error(
+        'Could not serialize the PuLP problem from the model code.',
+      );
+    }
+
+    const discoveryResult = JSON.parse(result) as DiscoveryResult;
+
+    if (discoveryResult.error || !discoveryResult.problem) {
+      throw new Error(
+        discoveryResult.error || 'Unknown error during problem discovery.',
+      );
+    }
+
+    const problem: Problem = discoveryResult.problem;
+
+    const startTime = Date.now();
+    const solutionResult = await remipClient.solve(problem);
+    const solveTime = (Date.now() - startTime) / 1000;
+
+    if (!solutionResult) {
+      throw new Error('Solver failed to produce a solution.');
+    }
+
+    const solutionId = `sol-${randomUUID()}`;
+    const solution: SolutionObject = {
+      solution_id: solutionId,
+      status: 'Optimal',
+      objective_value: solutionResult.objectiveValue,
+      solve_time_seconds: solveTime,
+      variables: solutionResult.variableValues,
+    };
+
+    logger.info({ solution }, 'Saving solution object to storage');
+    storageService.setSolution(sessionId, solution);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { variables: _variables, ...summary } = solution;
+    return summary;
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred';
     if (error instanceof Error) {
@@ -72,62 +133,4 @@ export async function solveProblem(
       `An error occurred in the model code execution: ${errorMessage}`,
     );
   }
-
-  const discoveryCode = `
-import json
-import pulp
-
-lp_problems = [v for v in globals().values() if isinstance(v, pulp.LpProblem)]
-
-result = {"error": None, "problem": None}
-if len(lp_problems) == 1:
-    result["problem"] = lp_problems[0].toDict()
-elif len(lp_problems) == 0:
-    result["error"] = "No pulp.LpProblem instance found in the model code."
-else:
-    result["error"] = "Multiple pulp.LpProblem instances found. Please ensure only one is defined."
-
-json.dumps(result)
-`;
-  const result = await pyodideRunner.run(sessionId, discoveryCode);
-
-  if (typeof result !== 'string') {
-    throw new Error(
-      'Could not serialize the PuLP problem from the model code.',
-    );
-  }
-
-  const discoveryResult = JSON.parse(result) as DiscoveryResult;
-
-  if (discoveryResult.error || !discoveryResult.problem) {
-    throw new Error(
-      discoveryResult.error || 'Unknown error during problem discovery.',
-    );
-  }
-
-  const problem: Problem = discoveryResult.problem;
-
-  const startTime = Date.now();
-  const solutionResult = await remipClient.solve(problem);
-  const solveTime = (Date.now() - startTime) / 1000;
-
-  if (!solutionResult) {
-    throw new Error('Solver failed to produce a solution.');
-  }
-
-  const solutionId = `sol-${randomUUID()}`;
-  const solution: SolutionObject = {
-    solution_id: solutionId,
-    status: 'Optimal',
-    objective_value: solutionResult.objectiveValue,
-    solve_time_seconds: solveTime,
-    variables: solutionResult.variableValues,
-  };
-
-  logger.info({ solution }, 'Saving solution object to storage');
-  storageService.setSolution(sessionId, solution);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { variables: _variables, ...summary } = solution;
-  return summary;
 }
