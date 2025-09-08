@@ -26,10 +26,8 @@ import { processSolution } from './tools/processSolution.js';
 import { listModels } from './tools/listModels.js';
 import { getModel } from './tools/getModel.js';
 import { listSolutions } from './tools/listSolutions.js';
-import { getModelJson } from './tools/getModelJson.js';
 import {
   defineModelOutputSchema,
-  getModelJsonOutputSchema,
   getModelOutputSchema,
   getSolutionOutputSchema,
   listModelsOutputSchema,
@@ -254,9 +252,12 @@ async function setupMcpServer(
       const result = await getModel(extra.sessionId!, params, {
         storageService,
       });
+      const structuredContent = {
+        model: result,
+      };
       return {
-        content: [{ type: 'text', text: JSON.stringify(result) }],
-        result,
+        content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
+        structuredContent,
       };
     },
   );
@@ -283,28 +284,7 @@ async function setupMcpServer(
     },
   );
 
-  mcpServer.registerTool(
-    'get_model_json',
-    {
-      description: 'Gets the JSON representation of a PuLP model.',
-      inputSchema: z.object({ code: z.string() }).shape,
-      outputSchema: getModelJsonOutputSchema.shape,
-    },
-    async (params: { code: string }, extra: McpExtraArgs) => {
-      const result = await getModelJson(extra.sessionId!, params, {
-        pyodideRunner,
-      });
-      const structuredContent = {
-        model_json: result,
-      };
-      return {
-        content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
-        structuredContent,
-      };
-    },
-  );
-
-  logger.info('Registered all new tools.');
+  logger.info('Registered all tools.');
 
   await mcpServer.connect(transport);
   return mcpServer;

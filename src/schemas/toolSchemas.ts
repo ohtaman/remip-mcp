@@ -90,7 +90,3 @@ export const checkPackagesOutputSchema = z.object({
   installed: z.array(z.string()),
   not_installed: z.array(z.string()),
 });
-
-export const getModelJsonOutputSchema = z.object({
-  model_json: z.record(z.unknown()),
-});
