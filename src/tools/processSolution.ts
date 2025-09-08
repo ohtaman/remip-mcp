@@ -23,9 +23,17 @@ export async function processSolution(
     throw new Error(`Solution not found: ${params.solution_id}`);
   }
 
-  const result = await pyodideRunner.run(sessionId, params.processing_code, {
-    globals: { solution: solution },
-  });
+  // Your elegant solution:
+  const solutionJson = JSON.stringify(solution);
+  const fullCode = `
+import json
+solution = json.loads('''${solutionJson}''')
+
+# --- User's Code ---
+${params.processing_code}
+`;
+
+  const result = await pyodideRunner.run(sessionId, fullCode);
 
   if (result !== null && result !== undefined) {
     return String(result);

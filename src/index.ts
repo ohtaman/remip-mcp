@@ -174,7 +174,7 @@ async function setupMcpServer(
     'process_solution',
     {
       description:
-        'Processes a raw solution using a Python script for analysis.',
+        'Processes a solution using a Python script. The solution object is available as a native Python dictionary named `solution`.',
       inputSchema: processSolutionSchema.shape,
     },
     async (
