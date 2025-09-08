@@ -123,7 +123,8 @@ async function setupMcpServer(
     },
   );
 
-  const solveProblemHandler = async (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const solveProblemHandler: any = async (
     params: z.infer<typeof solveProblemSchema>,
     extra: McpExtraArgs & {
       sendNotification: (notification: {

@@ -62,7 +62,7 @@ export class ReMIPClient extends EventEmitter {
     if (rawSolution && rawSolution.objective_value !== undefined) {
       return {
         objectiveValue: rawSolution.objective_value,
-        variableValues: rawSolution.variable_values,
+        variableValues: rawSolution.variables,
       };
     }
     return null;
