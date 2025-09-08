@@ -55,8 +55,19 @@ export async function solveProblem(
     await pyodideRunner.run(sessionId, model.code, {
       globals: { data: params.data },
     });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+  } catch (error: unknown) {
+    let errorMessage = 'An unknown error occurred';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error
+    ) {
+      errorMessage = String((error as { message: unknown }).message);
+    } else {
+      errorMessage = String(error);
+    }
     throw new Error(
       `An error occurred in the model code execution: ${errorMessage}`,
     );

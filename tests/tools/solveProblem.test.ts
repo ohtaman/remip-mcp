@@ -59,9 +59,10 @@ describe('solveProblem Tool', () => {
     const fakeStorage = new StorageService();
     fakeStorage.setModel(sessionId, model);
 
-    const pythonSyntaxError = new Error(
-      'Traceback(...)\nSyntaxError: invalid syntax',
-    );
+    // Simulate a non-standard error object, which is more realistic for a proxy
+    const pythonSyntaxError = {
+      message: 'Traceback(...)\nSyntaxError: invalid syntax',
+    };
     const fakePyodideRunner = {
       run: jest.fn().mockRejectedValue(pythonSyntaxError),
     } as unknown as PyodideRunner;
