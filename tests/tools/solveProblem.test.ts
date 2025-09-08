@@ -54,4 +54,32 @@ describe('solveProblem Tool', () => {
     expect(fakeRemipClient.solve).toHaveBeenCalledWith(mockProblem);
     expect(result.status).toBe('Optimal');
   });
+
+  it('should throw a user-friendly error if the model code has a syntax error', async () => {
+    const fakeStorage = new StorageService();
+    fakeStorage.setModel(sessionId, model);
+
+    const pythonSyntaxError = new Error(
+      'Traceback(...)\nSyntaxError: invalid syntax',
+    );
+    const fakePyodideRunner = {
+      run: jest.fn().mockRejectedValue(pythonSyntaxError),
+    } as unknown as PyodideRunner;
+
+    const params = { model_name: 'my_model', data: {} };
+
+    await expect(
+      solveProblem(sessionId, params, {
+        storageService: fakeStorage,
+        pyodideRunner: fakePyodideRunner,
+        remipClient: fakeRemipClient,
+        sendNotification: async () => {},
+      }),
+    ).rejects.toThrow(
+      new RegExp(
+        '^An error occurred in the model code execution:.*SyntaxError',
+        's',
+      ),
+    );
+  });
 });

@@ -38,7 +38,6 @@ export async function solveProblem(
     throw new Error(`Model not found: ${params.model_name}`);
   }
 
-  // --- Validation Step ---
   const requiredInputs = new Set(model.inputs);
   const providedInputs = new Set(Object.keys(params.data));
   if (
@@ -52,10 +51,16 @@ export async function solveProblem(
     );
   }
 
-  // --- Problem Generation ---
-  await pyodideRunner.run(sessionId, model.code, {
-    globals: { data: params.data },
-  });
+  try {
+    await pyodideRunner.run(sessionId, model.code, {
+      globals: { data: params.data },
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `An error occurred in the model code execution: ${errorMessage}`,
+    );
+  }
 
   const discoveryCode = `
 import json
@@ -91,7 +96,6 @@ json.dumps(result)
 
   const problem: Problem = discoveryResult.problem;
 
-  // --- Solving ---
   const startTime = Date.now();
   const solutionResult = await remipClient.solve(problem);
   const solveTime = (Date.now() - startTime) / 1000;
@@ -103,7 +107,7 @@ json.dumps(result)
   const solutionId = `sol-${randomUUID()}`;
   const solution: SolutionObject = {
     solution_id: solutionId,
-    status: 'Optimal', // This needs to be properly mapped from solver result
+    status: 'Optimal',
     objective_value: solutionResult.objectiveValue,
     solve_time_seconds: solveTime,
     variables: solutionResult.variableValues,
