@@ -27,6 +27,11 @@ import { listModels } from './tools/listModels.js';
 import { getModel } from './tools/getModel.js';
 import { listSolutions } from './tools/listSolutions.js';
 import {
+  defineModelSchema,
+  getModelSchema,
+  getSolutionSchema,
+  processSolutionSchema,
+  solveProblemSchema,
   defineModelOutputSchema,
   getModelOutputSchema,
   getSolutionOutputSchema,
@@ -41,32 +46,6 @@ interface McpExtraArgs {
 }
 
 const require = createRequire(import.meta.url);
-
-// Zod Schemas for New Tools
-const defineModelSchema = z.object({
-  model_name: z.string(),
-  model_code: z.string(),
-  inputs: z.array(z.string()),
-});
-
-const solveProblemSchema = z.object({
-  model_name: z.string(),
-  data: z.record(z.unknown()),
-});
-
-const getSolutionSchema = z.object({
-  solution_id: z.string(),
-  include_zero_variables: z.boolean().optional().default(false),
-});
-
-const processSolutionSchema = z.object({
-  solution_id: z.string(),
-  processing_code: z.string(),
-});
-
-const getModelSchema = z.object({
-  model_name: z.string(),
-});
 
 function installProcessHandlers() {
   (['SIGINT', 'SIGTERM', 'SIGHUP'] as NodeJS.Signals[]).forEach((sig) => {
