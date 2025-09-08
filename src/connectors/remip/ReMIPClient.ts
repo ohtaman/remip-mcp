@@ -58,7 +58,14 @@ export class ReMIPClient extends EventEmitter {
       );
     }
 
-    return (await response.json()) as Solution;
+    const rawSolution = await response.json();
+    if (rawSolution && rawSolution.objective_value !== undefined) {
+      return {
+        objectiveValue: rawSolution.objective_value,
+        variableValues: rawSolution.variable_values,
+      };
+    }
+    return null;
   }
 
   private async solveWithStreaming(problem: Problem): Promise<Solution | null> {
@@ -115,7 +122,7 @@ export class ReMIPClient extends EventEmitter {
                 if (rawSolution && rawSolution.objective_value !== undefined) {
                   solution = {
                     objectiveValue: rawSolution.objective_value,
-                    variableValues: rawSolution.variable_values,
+                    variableValues: rawSolution.variables,
                   };
                 }
                 break;
