@@ -31,27 +31,34 @@ export async function solveProblem(
   params: SolveProblemParams,
   services: SolveProblemServices,
 ): Promise<SolutionSummary> {
-  const { storageService, pyodideRunner, remipClient } = services;
+  const { storageService, pyodideRunner, remipClient, sendNotification } =
+    services;
 
-  const model = storageService.getModel(sessionId, params.model_name);
-  if (!model) {
-    throw new Error(`Model not found: ${params.model_name}`);
-  }
+  try {
+    await sendNotification({
+      method: 'progress',
+      params: { progress: 0, message: 'Starting problem solving...' },
+    });
 
-  const requiredInputs = new Set(model.inputs);
-  const providedInputs = new Set(Object.keys(params.data));
-  if (
-    requiredInputs.size !== providedInputs.size ||
-    ![...requiredInputs].every((key) => providedInputs.has(key as string))
-  ) {
-    throw new Error(
-      `Input data does not match model inputs. Required: ${model.inputs.join(
-        ',',
-      )}. Provided: ${Object.keys(params.data).join(',')}`,
-    );
-  }
+    const model = storageService.getModel(sessionId, params.model_name);
+    if (!model) {
+      throw new Error(`Model not found: ${params.model_name}`);
+    }
 
-  const executionCode = `
+    const requiredInputs = new Set(model.inputs);
+    const providedInputs = new Set(Object.keys(params.data));
+    if (
+      requiredInputs.size !== providedInputs.size ||
+      ![...requiredInputs].every((key) => providedInputs.has(key as string))
+    ) {
+      throw new Error(
+        `Input data does not match model inputs. Required: ${model.inputs.join(
+          ',',
+        )}. Provided: ${Object.keys(params.data).join(',')}`,
+      );
+    }
+
+    const executionCode = `
 # --- User's Model Code ---
 ${model.code}
 
@@ -72,9 +79,16 @@ else:
 json.dumps(result)
 `;
 
-  try {
     const result = await pyodideRunner.run(sessionId, executionCode, {
       globals: { ...params.data },
+    });
+
+    await sendNotification({
+      method: 'progress',
+      params: {
+        progress: 0.3,
+        message: 'Generating problem from model code...',
+      },
     });
 
     if (typeof result !== 'string') {
@@ -93,9 +107,24 @@ json.dumps(result)
 
     const problem: Problem = discoveryResult.problem;
 
+    const logListener = (log: { message: string }) => {
+      sendNotification({
+        method: 'log',
+        params: { message: `[Solver] ${log.message}` },
+      });
+    };
+    remipClient.on('log', logListener);
+
     const startTime = Date.now();
     const solutionResult = await remipClient.solve(problem);
     const solveTime = (Date.now() - startTime) / 1000;
+
+    remipClient.off('log', logListener);
+
+    await sendNotification({
+      method: 'progress',
+      params: { progress: 1.0, message: 'Problem solved successfully.' },
+    });
 
     if (!solutionResult) {
       throw new Error('Solver failed to produce a solution.');
@@ -104,7 +133,7 @@ json.dumps(result)
     const solutionId = `sol-${randomUUID()}`;
     const solution: SolutionObject = {
       solution_id: solutionId,
-      status: solutionResult.status || 'optimal', // ReMIPクライアントから返されるステータスを使用
+      status: solutionResult.status || 'optimal',
       objective_value: solutionResult.objectiveValue,
       solve_time_seconds: solveTime,
       variables: solutionResult.variableValues,
@@ -129,6 +158,13 @@ json.dumps(result)
     } else {
       errorMessage = String(error);
     }
+
+    // Send error notification before throwing
+    await sendNotification({
+      method: 'error',
+      params: { message: errorMessage },
+    });
+
     throw new Error(
       `An error occurred in the model code execution: ${errorMessage}`,
     );
