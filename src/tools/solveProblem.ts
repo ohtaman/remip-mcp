@@ -104,7 +104,7 @@ json.dumps(result)
     const solutionId = `sol-${randomUUID()}`;
     const solution: SolutionObject = {
       solution_id: solutionId,
-      status: 'optimal',
+      status: solutionResult.status || 'optimal', // ReMIPクライアントから返されるステータスを使用
       objective_value: solutionResult.objectiveValue,
       solve_time_seconds: solveTime,
       variables: solutionResult.variableValues,

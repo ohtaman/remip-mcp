@@ -63,6 +63,7 @@ export class ReMIPClient extends EventEmitter {
       return {
         objectiveValue: rawSolution.objective_value,
         variableValues: rawSolution.variables,
+        status: rawSolution.status || 'optimal', // デフォルトはoptimal、ステータスが提供されていない場合
       };
     }
     return null;
@@ -123,6 +124,7 @@ export class ReMIPClient extends EventEmitter {
                   solution = {
                     objectiveValue: rawSolution.objective_value,
                     variableValues: rawSolution.variables,
+                    status: rawSolution.status || 'optimal', // デフォルトはoptimal、ステータスが提供されていない場合
                   };
                 }
                 break;
