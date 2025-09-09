@@ -148,7 +148,7 @@ async function setupMcpServer(
     'solve_problem',
     {
       description:
-        'Executes an optimization run using a pre-defined model and specific input data. Prerequisites: Model must define exactly one pulp.LpProblem globally via define_model. Requirements: data keys must exactly match define_model.inputs (if inputs=[], pass data={}). Process: Execute model code → discover single LpProblem from globals → solve via ReMIP → return summary. Common errors: No/multiple LpProblem instances, data key mismatch.',
+        'Executes an optimization run using a pre-defined model and specific input data. The input data is made available as global variables in the model code (e.g., if you pass {"activities": [...]}, then "activities" becomes a global variable). Prerequisites: Model must define exactly one pulp.LpProblem globally via define_model. Requirements: data keys must exactly match define_model.inputs (if inputs=[], pass data={}). Process: Execute model code with input data as global variables → discover single LpProblem from globals → solve via ReMIP → return summary. Common errors: No/multiple LpProblem instances, data key mismatch.',
       inputSchema: solveProblemSchema.shape,
       outputSchema: solveProblemOutputSchema.shape,
     },
