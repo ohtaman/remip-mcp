@@ -195,7 +195,11 @@ async function setupMcpServer(
       });
       return {
         content: [{ type: 'text', text: JSON.stringify(result) }],
-        result,
+        structuredContent: {
+          result: result.result,
+          stdout: result.stdout,
+          stderr: result.stderr,
+        },
       };
     },
   );
