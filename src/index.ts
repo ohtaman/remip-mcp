@@ -98,7 +98,8 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'define_model',
     {
-      description: 'Defines or updates a reusable optimization model template.',
+      description:
+        'Defines or updates a reusable optimization model template. Requirements: (1) Define exactly one pulp.LpProblem globally in model code (e.g., prob = pulp.LpProblem(...)). (2) inputs array specifies required data keys for solve_problem (if inputs is empty, pass data={}). Tips: Add objective/constraints to prob, avoid defining multiple LpProblem instances.',
       inputSchema: defineModelSchema.shape,
       outputSchema: defineModelOutputSchema.shape,
     },
@@ -147,7 +148,7 @@ async function setupMcpServer(
     'solve_problem',
     {
       description:
-        'Executes an optimization run using a pre-defined model and specific input data.',
+        'Executes an optimization run using a pre-defined model and specific input data. Prerequisites: Model must define exactly one pulp.LpProblem globally via define_model. Requirements: data keys must exactly match define_model.inputs (if inputs=[], pass data={}). Process: Execute model code → discover single LpProblem from globals → solve via ReMIP → return summary. Common errors: No/multiple LpProblem instances, data key mismatch.',
       inputSchema: solveProblemSchema.shape,
       outputSchema: solveProblemOutputSchema.shape,
     },
@@ -158,7 +159,7 @@ async function setupMcpServer(
     'get_solution',
     {
       description:
-        'Retrieves the complete, raw solution object for a given solution ID.',
+        'Retrieves the complete, raw solution object for a given solution ID from solve_problem, including variable values, objective_value, and other details.',
       inputSchema: getSolutionSchema.shape,
       outputSchema: getSolutionOutputSchema.shape,
     },
@@ -180,7 +181,7 @@ async function setupMcpServer(
     'process_solution',
     {
       description:
-        'Processes a solution using a Python script. The solution object is available as a native Python dictionary named `solution`.',
+        'Processes a solution using a Python script. The solution object is available as a native Python dictionary named `solution`. Examples: solution["objective_value"], solution["variables"]["x_A"]. Returns any JSON-serializable value.',
       inputSchema: processSolutionSchema.shape,
       outputSchema: processSolutionOutputSchema.shape,
     },
@@ -202,7 +203,8 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'list_models',
     {
-      description: 'Lists all models registered in the current session.',
+      description:
+        'Lists all models registered in the current session with their metadata.',
       inputSchema: z.object({}).shape,
       outputSchema: listModelsOutputSchema.shape,
     },
@@ -223,7 +225,8 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'get_model',
     {
-      description: 'Retrieves the source code for a registered model.',
+      description:
+        'Retrieves the source code and inputs for a registered model. Useful for model reuse and debugging.',
       inputSchema: getModelSchema.shape,
       outputSchema: getModelOutputSchema.shape,
     },
@@ -245,7 +248,7 @@ async function setupMcpServer(
     'list_solutions',
     {
       description:
-        'Lists summaries of all solutions generated in the current session.',
+        'Lists summaries of all solutions generated in the current session (solution_id, objective_value, status, etc.).',
       inputSchema: z.object({}).shape,
       outputSchema: listSolutionsOutputSchema.shape,
     },

@@ -87,7 +87,14 @@ export class PyodideRunner {
       const globals = pyodide.globals.get('dict')();
       if (options?.globals) {
         for (const [key, value] of Object.entries(options.globals)) {
-          globals.set(key, value);
+          // Convert JS values to Python objects when possible to avoid JsProxy subscripting issues
+          const pyValue =
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            typeof (pyodide as any).toPy === 'function'
+              ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (pyodide as any).toPy(value)
+              : value;
+          globals.set(key, pyValue);
         }
       }
       const result = await pyodide.runPythonAsync(code, { globals });
