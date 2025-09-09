@@ -62,9 +62,13 @@ export type RemipEvent = z.infer<typeof remipEventSchema>;
 export const solutionSchema = z.object({
   objectiveValue: z.number().nullable(),
   variableValues: z.record(z.string(), z.number()),
-  status: z
-    .enum(['not solved', 'optimal', 'infeasible', 'unbounded', 'timelimit'])
-    .optional(),
+  status: z.enum([
+    'not solved',
+    'optimal',
+    'infeasible',
+    'unbounded',
+    'timelimit',
+  ]),
 });
 
 export type Solution = z.infer<typeof solutionSchema>;
