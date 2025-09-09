@@ -98,8 +98,7 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'define_model',
     {
-      description:
-        'Defines or updates a reusable optimization model template. Requirements: (1) Define exactly one pulp.LpProblem globally in model code (e.g., prob = pulp.LpProblem(...)). (2) inputs array specifies required data keys for solve_problem (if inputs is empty, pass data={}). Tips: Add objective/constraints to prob, avoid defining multiple LpProblem instances.',
+      description: 'Defines a optimization model template.',
       inputSchema: defineModelSchema.shape,
       outputSchema: defineModelOutputSchema.shape,
     },
@@ -148,7 +147,7 @@ async function setupMcpServer(
     'solve_problem',
     {
       description:
-        'Executes an optimization run using a pre-defined model and specific input data. The input data is made available as global variables in the model code (e.g., if you pass {"activities": [...]}, then "activities" becomes a global variable). Prerequisites: Model must define exactly one pulp.LpProblem globally via define_model. Requirements: data keys must exactly match define_model.inputs (if inputs=[], pass data={}). Process: Execute model code with input data as global variables → discover single LpProblem from globals → solve via ReMIP → return summary. Common errors: No/multiple LpProblem instances, data key mismatch.',
+        'Executes an optimization run using a pre-defined model and specific input data. Process: Execute model code with input data as global variables → discover single LpProblem from globals → solve via ReMIP → return summary.',
       inputSchema: solveProblemSchema.shape,
       outputSchema: solveProblemOutputSchema.shape,
     },
@@ -159,7 +158,7 @@ async function setupMcpServer(
     'get_solution',
     {
       description:
-        'Retrieves the complete, raw solution object for a given solution ID from solve_problem, including variable values, objective_value, and other details.',
+        'Retrieves the solution object for a given solution ID from solve_problem, including variable values, objective_value, and other details.',
       inputSchema: getSolutionSchema.shape,
       outputSchema: getSolutionOutputSchema.shape,
     },
@@ -181,7 +180,7 @@ async function setupMcpServer(
     'process_solution',
     {
       description:
-        'Processes a solution using a Python script. The solution object is available as a native Python dictionary named `solution`. Examples: solution["objective_value"], solution["variables"]["x_A"]. Returns any JSON-serializable value.',
+        'Processes a solution using a Python script and returns the result.',
       inputSchema: processSolutionSchema.shape,
       outputSchema: processSolutionOutputSchema.shape,
     },
