@@ -74,7 +74,7 @@ json.dumps(result)
 
   try {
     const result = await pyodideRunner.run(sessionId, executionCode, {
-      globals: { data: params.data },
+      globals: { ...params.data },
     });
 
     if (typeof result !== 'string') {
