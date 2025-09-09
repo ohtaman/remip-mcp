@@ -1,7 +1,20 @@
-import { z } from "zod";
+import { z } from 'zod';
+
+// The summary returned by solve_problem and list_solutions
+export interface SolutionSummary {
+  solution_id: string;
+  status: 'not solved' | 'optimal' | 'infeasible' | 'unbounded' | 'timelimit';
+  objective_value: number | null;
+  solve_time_seconds: number;
+}
+
+// The full object stored on the server and returned by get_solution
+export interface SolutionObject extends SolutionSummary {
+  variables: Record<string, number>;
+}
 
 export const remipMetricSchema = z.object({
-  type: z.literal("metric"),
+  type: z.literal('metric'),
   data: z.object({
     name: z.string(),
     value: z.number(),
@@ -10,7 +23,7 @@ export const remipMetricSchema = z.object({
 });
 
 export const remipLogSchema = z.object({
-  type: z.literal("log"),
+  type: z.literal('log'),
   data: z.object({
     message: z.string(),
     timestamp: z.string(),
@@ -18,7 +31,7 @@ export const remipLogSchema = z.object({
 });
 
 export const remipStatusSchema = z.object({
-  type: z.literal("status"),
+  type: z.literal('status'),
   data: z.object({
     status: z.string(),
     timestamp: z.string(),
@@ -26,7 +39,7 @@ export const remipStatusSchema = z.object({
 });
 
 export const remipResultSchema = z.object({
-  type: z.literal("result"),
+  type: z.literal('result'),
   data: z.object({
     objective_value: z.number(),
     variable_values: z.record(z.number()),
@@ -52,11 +65,3 @@ export const solutionSchema = z.object({
 });
 
 export type Solution = z.infer<typeof solutionSchema>;
-
-export enum LpStatus {
-  NotSolved,
-  Optimal,
-  Infeasible,
-  Unbounded,
-  Undefined,
-}

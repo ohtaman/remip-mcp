@@ -1,81 +1,130 @@
-
-import { StorageService } from '@app/storage';
+import { StorageService } from '../../src/app/storage';
+import { Model } from '../../src/schemas/models';
+import { SolutionObject } from '../../src/schemas/solutions';
 
 describe('StorageService', () => {
-  let storage: StorageService;
+  let storageService: StorageService;
+  const sessionId = 'test-session';
 
   beforeEach(() => {
-    storage = new StorageService();
+    storageService = new StorageService();
   });
 
-  it('should set and get a value', () => {
-    const sessionId = 'session1';
-    const key = 'mykey';
-    const value = { data: 'mydata' };
+  describe('Models', () => {
+    const model1: Model = {
+      name: 'model1',
+      code: 'code1',
+      type: 'pulp.LpProblem',
+      inputs: ['a'],
+    };
+    const model2: Model = {
+      name: 'model2',
+      code: 'code2',
+      type: 'pulp.LpProblem',
+      inputs: ['b'],
+    };
 
-    storage.set(sessionId, key, value);
-    const retrieved = storage.get(sessionId, key);
+    it('should set and get a model', () => {
+      storageService.setModel(sessionId, model1);
+      const retrieved = storageService.getModel(sessionId, 'model1');
+      expect(retrieved).toEqual(model1);
+    });
 
-    expect(retrieved).toEqual(value);
+    it('should return undefined for a non-existent model', () => {
+      expect(
+        storageService.getModel(sessionId, 'non-existent'),
+      ).toBeUndefined();
+    });
+
+    it('should list all models for a session', () => {
+      storageService.setModel(sessionId, model1);
+      storageService.setModel(sessionId, model2);
+      const models = storageService.listModels(sessionId);
+      expect(models).toEqual([model1, model2]);
+    });
+
+    it('should return an empty array if no models exist for a session', () => {
+      expect(storageService.listModels(sessionId)).toEqual([]);
+    });
+
+    it('should not list models from other sessions', () => {
+      storageService.setModel(sessionId, model1);
+      storageService.setModel('other-session', model2);
+      expect(storageService.listModels(sessionId)).toEqual([model1]);
+    });
   });
 
-  it('should return undefined for a non-existent key', () => {
-    const sessionId = 'session1';
-    const key = 'nonexistent';
+  describe('Solutions', () => {
+    const solution1: SolutionObject = {
+      solution_id: 'sol1',
+      status: 'optimal',
+      objective_value: 100,
+      solve_time_seconds: 1.0,
+      variables: { x: 1 },
+    };
+    const solution2: SolutionObject = {
+      solution_id: 'sol2',
+      status: 'infeasible',
+      objective_value: null,
+      solve_time_seconds: 2.0,
+      variables: {},
+    };
 
-    const retrieved = storage.get(sessionId, key);
+    it('should set and get a solution', () => {
+      storageService.setSolution(sessionId, solution1);
+      const retrieved = storageService.getSolution(sessionId, 'sol1');
+      expect(retrieved).toEqual(solution1);
+    });
 
-    expect(retrieved).toBeUndefined();
+    it('should return undefined for a non-existent solution', () => {
+      expect(
+        storageService.getSolution(sessionId, 'non-existent'),
+      ).toBeUndefined();
+    });
+
+    it('should list all solution summaries for a session', () => {
+      storageService.setSolution(sessionId, solution1);
+      storageService.setSolution(sessionId, solution2);
+      const summaries = storageService.listSolutions(sessionId);
+      // Omit 'variables' for summary
+      const { variables: _v1, ...summary1 } = solution1;
+      const { variables: _v2, ...summary2 } = solution2;
+      expect(summaries).toEqual([summary1, summary2]);
+    });
+
+    it('should not list solutions from other sessions', () => {
+      storageService.setSolution(sessionId, solution1);
+      storageService.setSolution('other-session', solution2);
+      const { variables: _v1, ...summary1 } = solution1;
+      expect(storageService.listSolutions(sessionId)).toEqual([summary1]);
+    });
   });
 
-  it('should not allow one session to access another session\'s data', () => {
-    const sessionId1 = 'session1';
-    const sessionId2 = 'session2';
-    const key = 'mykey';
-    const value1 = { data: 'mydata1' };
-    const value2 = { data: 'mydata2' };
+  describe('Session Management', () => {
+    it('should clear all data for a specific session', () => {
+      const model: Model = {
+        name: 'm1',
+        code: 'c1',
+        type: 'pulp.LpProblem',
+        inputs: [],
+      };
+      const solution: SolutionObject = {
+        solution_id: 's1',
+        status: 'optimal',
+        objective_value: 1,
+        solve_time_seconds: 1,
+        variables: {},
+      };
 
-    storage.set(sessionId1, key, value1);
-    storage.set(sessionId2, key, value2);
+      storageService.setModel(sessionId, model);
+      storageService.setSolution(sessionId, solution);
+      storageService.setModel('other-session', model);
 
-    const retrieved1 = storage.get(sessionId1, key);
-    const retrieved2 = storage.get(sessionId2, key);
+      storageService.clearSession(sessionId);
 
-    expect(retrieved1).toEqual(value1);
-    expect(retrieved2).toEqual(value2);
-    expect(storage.get('nonexistent', key)).toBeUndefined();
-  });
-
-  it('should delete a value', () => {
-    const sessionId = 'session1';
-    const key = 'mykey';
-    const value = { data: 'mydata' };
-
-    storage.set(sessionId, key, value);
-    storage.delete(sessionId, key);
-    const retrieved = storage.get(sessionId, key);
-
-    expect(retrieved).toBeUndefined();
-  });
-
-  it('should clear all data for a specific session', () => {
-    const sessionId1 = 'session1';
-    const sessionId2 = 'session2';
-
-    // Set data for two different sessions
-    storage.set(sessionId1, 'key1', 'value1');
-    storage.set(sessionId1, 'key2', 'value2');
-    storage.set(sessionId2, 'key1', 'value3');
-
-    // Clear session 1
-    const deletedCount = storage.clearSession(sessionId1);
-    expect(deletedCount).toBe(2);
-
-    // Check that session 1 data is gone
-    expect(storage.get(sessionId1, 'key1')).toBeUndefined();
-    expect(storage.get(sessionId1, 'key2')).toBeUndefined();
-
-    // Check that session 2 data is still there
-    expect(storage.get(sessionId2, 'key1')).toEqual('value3');
+      expect(storageService.getModel(sessionId, 'm1')).toBeUndefined();
+      expect(storageService.getSolution(sessionId, 's1')).toBeUndefined();
+      expect(storageService.getModel('other-session', 'm1')).toBeDefined();
+    });
   });
 });

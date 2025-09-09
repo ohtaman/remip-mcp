@@ -18,6 +18,7 @@ export const defaultConfig = {
   // path to the ReMIP Server to start.
   remipSourceURI: "git+https://github.com/ohtaman/remip.git#subdirectory=remip",
   pyodidePackages: ["numpy", "pandas"],
+  micropipPackages: ["pulp"],
 };
 
 export interface AppConfig {
@@ -30,6 +31,7 @@ export interface AppConfig {
   startRemipServer: boolean;
   remipSourceURI: string;
   pyodidePackages: string[];
+  micropipPackages: string[];
 }
 
 export function processCommandOptions(): AppConfig {
@@ -41,6 +43,7 @@ export function processCommandOptions(): AppConfig {
     "start-remip-server": { type: "boolean" },
     "remip-source-uri": { type: "string"},
     "pyodide-packages": { type: "string", multiple: true },
+    "micropip-packages": { type: "string", multiple: true },
     help: { type: "boolean", short: "h" },
   } as const;
 
@@ -65,6 +68,9 @@ Options:
   --pyodide-packages <package> Packages to install in Pyodide. Can be specified multiple times. (Default: ${defaultConfig.pyodidePackages.join(
     ", "
   )})
+  --micropip-packages <package> Packages to install via micropip. Can be specified multiple times. (Default: ${defaultConfig.micropipPackages.join(
+    ", "
+  )})
   -h, --help                   Show this help message
 `.trimStart()
     );
@@ -84,6 +90,7 @@ Options:
     startRemipServer: cliArgs["start-remip-server"] ?? defaultConfig.startRemipServer,
     remipSourceURI: cliArgs["remip-source-uri"] ?? defaultConfig.remipSourceURI,
     pyodidePackages: cliArgs["pyodide-packages"] ?? defaultConfig.pyodidePackages,
+    micropipPackages: cliArgs["micropip-packages"] ?? defaultConfig.micropipPackages,
   };
 
   return config;

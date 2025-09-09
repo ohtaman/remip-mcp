@@ -17,6 +17,7 @@ const compat = new FlatCompat({
 });
 
 module.exports = defineConfig([{
+    ignores: ["tests/**", "dist/**", "node_modules/**", "eslint.config.cjs"],
     languageOptions: {
         parser: tsParser,
     },

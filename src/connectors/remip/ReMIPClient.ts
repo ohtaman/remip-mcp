@@ -17,10 +17,6 @@ export class ReMIPClient extends EventEmitter {
   private readonly stream: boolean;
   private readonly logger: Logger;
 
-  /**
-   * Constructs an instance of the ReMIPClient.
-   * @param options - Configuration options for the client.
-   */
   constructor({
     baseUrl = 'http://localhost:8000',
     stream = true,
@@ -32,11 +28,6 @@ export class ReMIPClient extends EventEmitter {
     this.logger = logger;
   }
 
-  /**
-   * Solves a given optimization problem by sending it to the ReMIP server.
-   * @param problem - A structured object representing the optimization problem.
-   * @returns A promise that resolves to the solution, or null if solving failed.
-   */
   public async solve(problem: Problem): Promise<Solution | null> {
     try {
       if (this.stream) {
@@ -53,10 +44,6 @@ export class ReMIPClient extends EventEmitter {
     }
   }
 
-  /**
-   * Solves the problem using a standard, non-streaming HTTP request.
-   * @private
-   */
   private async solveNonStreaming(problem: Problem): Promise<Solution | null> {
     const response = await fetch(`${this.baseUrl}/solve`, {
       method: 'POST',
@@ -71,21 +58,28 @@ export class ReMIPClient extends EventEmitter {
       );
     }
 
-    return (await response.json()) as Solution;
+    const rawSolution = await response.json();
+    if (rawSolution && rawSolution.objective_value !== undefined) {
+      return {
+        objectiveValue: rawSolution.objective_value,
+        variableValues: rawSolution.variables,
+      };
+    }
+    return null;
   }
 
-  /**
-   * Solves the problem using a streaming connection (Server-Sent Events).
-   * This allows for real-time logging and progress updates from the server.
-   * @private
-   */
   private async solveWithStreaming(problem: Problem): Promise<Solution | null> {
     const response = await fetch(`${this.baseUrl}/solve?stream=sse`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(problem),
     });
+    return this.parseStreamingResponse(response);
+  }
 
+  private async parseStreamingResponse(
+    response: Response,
+  ): Promise<Solution | null> {
     if (!response.ok || !response.body) {
       const errorBody = await response.text();
       throw new Error(
@@ -99,18 +93,16 @@ export class ReMIPClient extends EventEmitter {
     let buffer = '';
     let currentEvent: string | null = null;
 
-    // Process the stream chunk by chunk
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep the last, potentially incomplete, line
+      buffer = lines.pop() || '';
 
       for (const line of lines) {
         if (!line.trim()) {
-          // An empty line signals the end of an event block
           currentEvent = null;
           continue;
         }
@@ -118,17 +110,23 @@ export class ReMIPClient extends EventEmitter {
         if (line.startsWith('event: ')) {
           currentEvent = line.substring(7).trim();
         } else if (line.startsWith('data: ')) {
-          if (!currentEvent) continue; // Ignore data without an event type
+          if (!currentEvent) continue;
 
           const dataStr = line.substring(6).trim();
           try {
             const data = JSON.parse(dataStr);
 
             switch (currentEvent) {
-              case 'result':
-                // The result can be the data object itself or nested in a 'solution' field
-                solution = 'solution' in data ? data.solution : data;
+              case 'result': {
+                const rawSolution = 'solution' in data ? data.solution : data;
+                if (rawSolution && rawSolution.objective_value !== undefined) {
+                  solution = {
+                    objectiveValue: rawSolution.objective_value,
+                    variableValues: rawSolution.variables,
+                  };
+                }
                 break;
+              }
               case 'log': {
                 const logData = data as LogData;
                 this.emit('log', logData);
@@ -140,7 +138,6 @@ export class ReMIPClient extends EventEmitter {
                 break;
               }
               default:
-                // Silently ignore unknown event types
                 break;
             }
           } catch (e) {

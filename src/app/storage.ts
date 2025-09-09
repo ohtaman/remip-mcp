@@ -1,34 +1,66 @@
+import { Model } from '../schemas/models.js';
+import { SolutionObject, SolutionSummary } from '../schemas/solutions.js';
 
-import NodeCache from 'node-cache';
+type SessionModels = Map<string, Model>;
+type SessionSolutions = Map<string, SolutionObject>;
 
 export class StorageService {
-  private cache: NodeCache;
+  private modelsBySession: Map<string, SessionModels> = new Map();
+  private solutionsBySession: Map<string, SessionSolutions> = new Map();
 
-  constructor() {
-    this.cache = new NodeCache();
-  }
-
-  private getKey(sessionId: string, key: string): string {
-    return `${sessionId}:${key}`;
-  }
-
-  public set<T>(sessionId: string, key: string, value: T): void {
-    this.cache.set(this.getKey(sessionId, key), value);
-  }
-
-  public get<T>(sessionId: string, key: string): T | undefined {
-    return this.cache.get<T>(this.getKey(sessionId, key));
-  }
-
-  public delete(sessionId: string, key: string): void {
-    this.cache.del(this.getKey(sessionId, key));
-  }
-
-  public clearSession(sessionId: string): number {
-    const keysToDelete = this.cache.keys().filter(key => key.startsWith(`${sessionId}:`));
-    if (keysToDelete.length > 0) {
-      return this.cache.del(keysToDelete);
+  private getModelsForSession(sessionId: string): SessionModels {
+    if (!this.modelsBySession.has(sessionId)) {
+      this.modelsBySession.set(sessionId, new Map());
     }
-    return 0;
+    return this.modelsBySession.get(sessionId)!;
+  }
+
+  private getSolutionsForSession(sessionId: string): SessionSolutions {
+    if (!this.solutionsBySession.has(sessionId)) {
+      this.solutionsBySession.set(sessionId, new Map());
+    }
+    return this.solutionsBySession.get(sessionId)!;
+  }
+
+  public setModel(sessionId: string, model: Model): void {
+    const sessionModels = this.getModelsForSession(sessionId);
+    sessionModels.set(model.name, model);
+  }
+
+  public getModel(sessionId: string, modelName: string): Model | undefined {
+    const sessionModels = this.getModelsForSession(sessionId);
+    return sessionModels.get(modelName);
+  }
+
+  public listModels(sessionId: string): Model[] {
+    const sessionModels = this.getModelsForSession(sessionId);
+    return Array.from(sessionModels.values());
+  }
+
+  public setSolution(sessionId: string, solution: SolutionObject): void {
+    const sessionSolutions = this.getSolutionsForSession(sessionId);
+    sessionSolutions.set(solution.solution_id, solution);
+  }
+
+  public getSolution(
+    sessionId: string,
+    solutionId: string,
+  ): SolutionObject | undefined {
+    const sessionSolutions = this.getSolutionsForSession(sessionId);
+    return sessionSolutions.get(solutionId);
+  }
+
+  public listSolutions(sessionId: string): SolutionSummary[] {
+    const sessionSolutions = this.getSolutionsForSession(sessionId);
+    return Array.from(sessionSolutions.values()).map((solution) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { variables, ...summary } = solution;
+      return summary;
+    });
+  }
+
+  public clearSession(sessionId: string): void {
+    this.modelsBySession.delete(sessionId);
+    this.solutionsBySession.delete(sessionId);
   }
 }
