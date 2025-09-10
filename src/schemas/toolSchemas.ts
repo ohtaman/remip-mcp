@@ -27,7 +27,14 @@ const solutionSummarySchemaObject = {
       z.literal('not solved'),
       z.literal('timelimit'),
     ])
-    .describe("The status of the solution (e.g., 'optimal', 'infeasible')."),
+    .describe(
+      `The status of the solution. Possible values are:
+- optimal: An optimal solution has been found.
+- not solved: The solver was stopped before it could determine the solution status.
+- infeasible: The problem is infeasible (no solution exists).
+- unbounded: The problem is unbounded (the objective can be made infinitely large).
+- timelimit: The solver reached a time limit and returned the best solution found so far. This solution is feasible but not guaranteed to be optimal.`,
+    ),
   objective_value: z
     .number()
     .nullable()
