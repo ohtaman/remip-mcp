@@ -133,10 +133,10 @@ json.dumps(result)
     const solutionId = `sol-${randomUUID()}`;
     const solution: SolutionObject = {
       solution_id: solutionId,
-      status: solutionResult.status || 'optimal',
-      objective_value: solutionResult.objectiveValue,
+      status: solutionResult.status as SolutionSummary['status'],
+      objective_value: solutionResult.objective_value,
       solve_time_seconds: solveTime,
-      variables: solutionResult.variableValues,
+      variables: solutionResult.variables,
     };
 
     logger.info({ solution }, 'Saving solution object to storage');

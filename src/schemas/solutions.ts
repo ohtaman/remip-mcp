@@ -38,12 +38,20 @@ export const remipStatusSchema = z.object({
   }),
 });
 
+export const mipSolutionSchema = z.object({
+  name: z.string(),
+  status: z.string(),
+  objective_value: z.number().nullable(),
+  variables: z.record(z.string(), z.number()),
+  mip_gap: z.number().nullable().optional(),
+  slacks: z.record(z.string(), z.number()).nullable().optional(),
+  duals: z.record(z.string(), z.number()).nullable().optional(),
+  reduced_costs: z.record(z.string(), z.number()).nullable().optional(),
+});
+
 export const remipResultSchema = z.object({
   type: z.literal('result'),
-  data: z.object({
-    objective_value: z.number(),
-    variable_values: z.record(z.number()),
-  }),
+  data: mipSolutionSchema,
 });
 
 export const remipEventSchema = z.union([
@@ -58,17 +66,4 @@ export type RemipLog = z.infer<typeof remipLogSchema>;
 export type RemipStatus = z.infer<typeof remipStatusSchema>;
 export type RemipResult = z.infer<typeof remipResultSchema>;
 export type RemipEvent = z.infer<typeof remipEventSchema>;
-
-export const solutionSchema = z.object({
-  objectiveValue: z.number().nullable(),
-  variableValues: z.record(z.string(), z.number()),
-  status: z.enum([
-    'not solved',
-    'optimal',
-    'infeasible',
-    'unbounded',
-    'timelimit',
-  ]),
-});
-
-export type Solution = z.infer<typeof solutionSchema>;
+export type MipSolution = z.infer<typeof mipSolutionSchema>;

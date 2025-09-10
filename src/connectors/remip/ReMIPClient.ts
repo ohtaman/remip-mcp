@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { Solution } from '../../schemas/solutions.js';
+import { MipSolution } from '../../schemas/solutions.js';
 import type {
   Problem,
   LogData,
@@ -28,7 +28,7 @@ export class ReMIPClient extends EventEmitter {
     this.logger = logger;
   }
 
-  public async solve(problem: Problem): Promise<Solution | null> {
+  public async solve(problem: Problem): Promise<MipSolution | null> {
     try {
       if (this.stream) {
         return await this.solveWithStreaming(problem);
@@ -44,7 +44,9 @@ export class ReMIPClient extends EventEmitter {
     }
   }
 
-  private async solveNonStreaming(problem: Problem): Promise<Solution | null> {
+  private async solveNonStreaming(
+    problem: Problem,
+  ): Promise<MipSolution | null> {
     const response = await fetch(`${this.baseUrl}/solve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -60,16 +62,14 @@ export class ReMIPClient extends EventEmitter {
 
     const rawSolution = await response.json();
     if (rawSolution && rawSolution.objective_value !== undefined) {
-      return {
-        objectiveValue: rawSolution.objective_value,
-        variableValues: rawSolution.variables,
-        status: rawSolution.status,
-      };
+      return rawSolution as MipSolution;
     }
     return null;
   }
 
-  private async solveWithStreaming(problem: Problem): Promise<Solution | null> {
+  private async solveWithStreaming(
+    problem: Problem,
+  ): Promise<MipSolution | null> {
     const response = await fetch(`${this.baseUrl}/solve?stream=sse`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ export class ReMIPClient extends EventEmitter {
 
   private async parseStreamingResponse(
     response: Response,
-  ): Promise<Solution | null> {
+  ): Promise<MipSolution | null> {
     if (!response.ok || !response.body) {
       const errorBody = await response.text();
       throw new Error(
@@ -88,7 +88,7 @@ export class ReMIPClient extends EventEmitter {
       );
     }
 
-    let solution: Solution | null = null;
+    let solution: MipSolution | null = null;
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -121,11 +121,7 @@ export class ReMIPClient extends EventEmitter {
               case 'result': {
                 const rawSolution = 'solution' in data ? data.solution : data;
                 if (rawSolution && rawSolution.objective_value !== undefined) {
-                  solution = {
-                    objectiveValue: rawSolution.objective_value,
-                    variableValues: rawSolution.variables,
-                    status: rawSolution.status,
-                  };
+                  solution = rawSolution as MipSolution;
                 }
                 break;
               }
