@@ -147,7 +147,14 @@ json.dumps(result)
     storageService.setSolution(sessionId, solution);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { variables: _variables, ...summary } = solution;
+    const {
+      variables: _variables,
+      mip_gap,
+      slacks,
+      duals,
+      reduced_costs,
+      ...summary
+    } = solution;
     return summary;
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred';
