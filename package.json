@@ -25,7 +25,7 @@
     "*.{js,ts,tsx}": [
       "eslint --fix",
       "prettier --write",
-      "node --experimental-vm-modules node_modules/jest/bin/jest.js --findRelatedTests"
+      "node --experimental-vm-modules node_modules/jest/bin/jest.js --findRelatedTests --passWithNoTests"
     ]
   },
   "devDependencies": {
