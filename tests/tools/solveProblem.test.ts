@@ -1,3 +1,4 @@
+import { EventEmitter } from 'events';
 import { solveProblem } from '../../src/tools/solveProblem.js';
 import { StorageService } from '../../src/app/storage.js';
 import { Model } from '../../src/schemas/models.js';
@@ -22,13 +23,11 @@ describe('solveProblem Tool', () => {
     parameters: { name: 'Problem', sense: -1 },
   };
 
-  const fakeRemipClient = {
-    solve: jest.fn().mockResolvedValue({
-      objectiveValue: 123,
-      variableValues: { x: 1 },
-      status: 'optimal',
-    } as Solution),
-  } as unknown as ReMIPClient;
+  const createMockRemipClient = (solution: Partial<Solution>) => {
+    const client = new EventEmitter() as ReMIPClient;
+    client.solve = jest.fn().mockResolvedValue(solution);
+    return client;
+  };
 
   it('should combine user code and discovery code into a single run', async () => {
     const fakeStorage = new StorageService();
@@ -44,7 +43,7 @@ describe('solveProblem Tool', () => {
     await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
-      remipClient: fakeRemipClient,
+      remipClient: createMockRemipClient({ status: 'optimal' }),
       sendNotification: async () => {},
     });
 
@@ -63,21 +62,15 @@ describe('solveProblem Tool', () => {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
     } as unknown as PyodideRunner;
 
-    // infeasibleなソリューションを返すReMIPクライアント
-    const infeasibleRemipClient = {
-      solve: jest.fn().mockResolvedValue({
-        objectiveValue: 0,
-        variableValues: {},
-        status: 'infeasible',
-      } as Solution),
-    } as unknown as ReMIPClient;
-
     const params = { model_name: 'my_model', data: {} };
 
     const result = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
-      remipClient: infeasibleRemipClient,
+      remipClient: createMockRemipClient({
+        status: 'infeasible',
+        objectiveValue: 0,
+      }),
       sendNotification: async () => {},
     });
 
@@ -94,20 +87,15 @@ describe('solveProblem Tool', () => {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
     } as unknown as PyodideRunner;
 
-    const unboundedRemipClient = {
-      solve: jest.fn().mockResolvedValue({
-        objectiveValue: Infinity,
-        variableValues: {},
-        status: 'unbounded',
-      } as Solution),
-    } as unknown as ReMIPClient;
-
     const params = { model_name: 'my_model', data: {} };
 
     const result = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
-      remipClient: unboundedRemipClient,
+      remipClient: createMockRemipClient({
+        status: 'unbounded',
+        objectiveValue: Infinity,
+      }),
       sendNotification: async () => {},
     });
 
@@ -124,20 +112,15 @@ describe('solveProblem Tool', () => {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
     } as unknown as PyodideRunner;
 
-    const timelimitRemipClient = {
-      solve: jest.fn().mockResolvedValue({
-        objectiveValue: 100,
-        variableValues: { x: 5 },
-        status: 'timelimit',
-      } as Solution),
-    } as unknown as ReMIPClient;
-
     const params = { model_name: 'my_model', data: {} };
 
     const result = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
-      remipClient: timelimitRemipClient,
+      remipClient: createMockRemipClient({
+        status: 'timelimit',
+        objectiveValue: 100,
+      }),
       sendNotification: async () => {},
     });
 
@@ -154,24 +137,100 @@ describe('solveProblem Tool', () => {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
     } as unknown as PyodideRunner;
 
-    const notSolvedRemipClient = {
-      solve: jest.fn().mockResolvedValue({
-        objectiveValue: null,
-        variableValues: {},
-        status: 'not solved',
-      } as Solution),
-    } as unknown as ReMIPClient;
-
     const params = { model_name: 'my_model', data: {} };
 
     const result = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
-      remipClient: notSolvedRemipClient,
+      remipClient: createMockRemipClient({
+        status: 'not solved',
+        objectiveValue: null,
+      }),
       sendNotification: async () => {},
     });
 
     expect(result.status).toBe('not solved');
     expect(result.objective_value).toBe(null);
+  });
+
+  describe('Notifications', () => {
+    it('should send progress and log notifications on success', async () => {
+      const fakeStorage = new StorageService();
+      fakeStorage.setModel(sessionId, model);
+
+      const discoveryResult = { problem: mockProblem, error: null };
+      const fakePyodideRunner = {
+        run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
+      } as unknown as PyodideRunner;
+
+      const mockRemipClient = createMockRemipClient({});
+      mockRemipClient.solve = jest.fn().mockImplementation(async () => {
+        mockRemipClient.emit('log', { message: 'Solver log 1' });
+        return {
+          objectiveValue: 123,
+          variableValues: { x: 1 },
+          status: 'optimal',
+        };
+      });
+
+      const mockSendNotification = jest.fn();
+
+      const params = { model_name: 'my_model', data: {} };
+
+      await solveProblem(sessionId, params, {
+        storageService: fakeStorage,
+        pyodideRunner: fakePyodideRunner,
+        remipClient: mockRemipClient,
+        sendNotification: mockSendNotification,
+      });
+
+      expect(mockSendNotification).toHaveBeenCalledWith({
+        method: 'progress',
+        params: { progress: 0, message: 'Starting problem solving...' },
+      });
+      expect(mockSendNotification).toHaveBeenCalledWith({
+        method: 'progress',
+        params: {
+          progress: 0.3,
+          message: 'Generating problem from model code...',
+        },
+      });
+      expect(mockSendNotification).toHaveBeenCalledWith({
+        method: 'log',
+        params: { message: '[Solver] Solver log 1' },
+      });
+      expect(mockSendNotification).toHaveBeenCalledWith({
+        method: 'progress',
+        params: { progress: 1.0, message: 'Problem solved successfully.' },
+      });
+      expect(mockSendNotification).toHaveBeenCalledTimes(4);
+    });
+
+    it('should send an error notification on failure', async () => {
+      const fakeStorage = new StorageService();
+      fakeStorage.setModel(sessionId, model);
+
+      const fakePyodideRunner = {
+        run: jest.fn().mockRejectedValue(new Error('Python Error')),
+      } as unknown as PyodideRunner;
+
+      const mockSendNotification = jest.fn();
+
+      const params = { model_name: 'my_model', data: {} };
+
+      await expect(
+        solveProblem(sessionId, params, {
+          storageService: fakeStorage,
+          pyodideRunner: fakePyodideRunner,
+          remipClient: createMockRemipClient({}),
+          sendNotification: mockSendNotification,
+        }),
+      ).rejects.toThrow();
+
+      expect(mockSendNotification).toHaveBeenCalledWith({
+        method: 'error',
+        params: { message: 'Python Error' },
+      });
+    });
   });
 });
