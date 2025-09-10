@@ -55,6 +55,22 @@ const solutionObjectSchemaObject = {
     .describe(
       'A dictionary of variable names and their corresponding solved values.',
     ),
+  mip_gap: z.number().nullable().optional().describe('The final MIP gap.'),
+  slacks: z
+    .record(z.string(), z.number())
+    .nullable()
+    .optional()
+    .describe('A dictionary of slack values for each constraint.'),
+  duals: z
+    .record(z.string(), z.number())
+    .nullable()
+    .optional()
+    .describe('A dictionary of dual values for each constraint.'),
+  reduced_costs: z
+    .record(z.string(), z.number())
+    .nullable()
+    .optional()
+    .describe('A dictionary of reduced costs for each variable.'),
 };
 
 export const defineModelSchema = z.object({

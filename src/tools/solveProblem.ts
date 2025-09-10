@@ -137,13 +137,21 @@ json.dumps(result)
       objective_value: solutionResult.objective_value,
       solve_time_seconds: solveTime,
       variables: solutionResult.variables,
+      mip_gap: solutionResult.mip_gap,
+      slacks: solutionResult.slacks,
+      duals: solutionResult.duals,
+      reduced_costs: solutionResult.reduced_costs,
     };
 
     logger.info({ solution }, 'Saving solution object to storage');
     storageService.setSolution(sessionId, solution);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { variables: _variables, ...summary } = solution;
+    const summary: SolutionSummary = {
+      solution_id: solution.solution_id,
+      status: solution.status,
+      objective_value: solution.objective_value,
+      solve_time_seconds: solution.solve_time_seconds,
+    };
     return summary;
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred';

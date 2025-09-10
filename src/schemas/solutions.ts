@@ -11,6 +11,10 @@ export interface SolutionSummary {
 // The full object stored on the server and returned by get_solution
 export interface SolutionObject extends SolutionSummary {
   variables: Record<string, number>;
+  mip_gap?: number | null;
+  slacks?: Record<string, number> | null;
+  duals?: Record<string, number> | null;
+  reduced_costs?: Record<string, number> | null;
 }
 
 export const remipMetricSchema = z.object({
