@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { solveProblem } from '../../src/tools/solveProblem.js';
 import { StorageService } from '../../src/app/storage.js';
 import { Model } from '../../src/schemas/models.js';
-import { Solution } from '../../src/schemas/solutions.js';
+import { MipSolution } from '../../src/schemas/solutions.js';
 import { Problem } from '../../src/connectors/remip/types.js';
 import { PyodideRunner } from '../../src/app/pyodideRunner.js';
 import { ReMIPClient } from '../../src/connectors/remip/ReMIPClient.js';
@@ -23,7 +23,7 @@ describe('solveProblem Tool', () => {
     parameters: { name: 'Problem', sense: -1 },
   };
 
-  const createMockRemipClient = (solution: Partial<Solution>) => {
+  const createMockRemipClient = (solution: Partial<MipSolution>) => {
     const client = new EventEmitter() as ReMIPClient;
     client.solve = jest.fn().mockResolvedValue(solution);
     return client;
@@ -43,7 +43,12 @@ describe('solveProblem Tool', () => {
     await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
-      remipClient: createMockRemipClient({ status: 'optimal' }),
+      remipClient: createMockRemipClient({
+        status: 'optimal',
+        objective_value: 0,
+        variables: {},
+        name: 'test',
+      }),
       sendNotification: async () => {},
     });
 
@@ -69,7 +74,9 @@ describe('solveProblem Tool', () => {
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
         status: 'infeasible',
-        objectiveValue: 0,
+        objective_value: 0,
+        variables: {},
+        name: 'test',
       }),
       sendNotification: async () => {},
     });
@@ -94,7 +101,9 @@ describe('solveProblem Tool', () => {
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
         status: 'unbounded',
-        objectiveValue: Infinity,
+        objective_value: Infinity,
+        variables: {},
+        name: 'test',
       }),
       sendNotification: async () => {},
     });
@@ -119,7 +128,9 @@ describe('solveProblem Tool', () => {
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
         status: 'timelimit',
-        objectiveValue: 100,
+        objective_value: 100,
+        variables: {},
+        name: 'test',
       }),
       sendNotification: async () => {},
     });
@@ -144,7 +155,9 @@ describe('solveProblem Tool', () => {
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
         status: 'not solved',
-        objectiveValue: null,
+        objective_value: null,
+        variables: {},
+        name: 'test',
       }),
       sendNotification: async () => {},
     });
@@ -167,9 +180,10 @@ describe('solveProblem Tool', () => {
       mockRemipClient.solve = jest.fn().mockImplementation(async () => {
         mockRemipClient.emit('log', { message: 'Solver log 1' });
         return {
-          objectiveValue: 123,
-          variableValues: { x: 1 },
+          objective_value: 123,
+          variables: { x: 1 },
           status: 'optimal',
+          name: 'test',
         };
       });
 
