@@ -146,15 +146,12 @@ json.dumps(result)
     logger.info({ solution }, 'Saving solution object to storage');
     storageService.setSolution(sessionId, solution);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const {
-      variables: _variables,
-      mip_gap,
-      slacks,
-      duals,
-      reduced_costs,
-      ...summary
-    } = solution;
+    const summary: SolutionSummary = {
+      solution_id: solution.solution_id,
+      status: solution.status,
+      objective_value: solution.objective_value,
+      solve_time_seconds: solution.solve_time_seconds,
+    };
     return summary;
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred';
