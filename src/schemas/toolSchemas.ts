@@ -94,7 +94,11 @@ export const solveProblemSchema = z.object({
   data: z
     .record(z.unknown())
     .describe(
-      'A dictionary of input data. Keys must match the variables in the \'inputs\' defined in the model. The input data is made available as global variables in the model code (e.g., if you pass {"activities": [...]}, then "activities" becomes a global variable)',
+      'A dictionary of input data which will be made available as global variables to your Python code.\n' +
+        '**Note on Data Conversion**: The JavaScript data object you provide is automatically converted into Python objects. This process has limitations similar to JSON serialization:\n' +
+        '1. Dictionary keys should be strings. Non-string primitive keys (like numbers) may be converted to strings.\n' +
+        '2. Complex objects (like Tuples or other objects) are **not supported** as dictionary keys. Using them will result in a `TypeError` before your model runs.\n' +
+        'To prevent unexpected errors, please ensure all dictionary keys in your data are strings.',
     ),
 });
 

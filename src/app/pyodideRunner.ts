@@ -96,6 +96,23 @@ export class PyodideRunner {
               : value;
           globals.set(key, pyValue);
         }
+
+        // --- START: New Validation Logic ---
+        try {
+          const validationCode = this._getValidationCode();
+          const validationTargets = Object.keys(options.globals);
+          globals.set(
+            '__validation_target_variable_names__',
+            validationTargets,
+          );
+          await pyodide.runPythonAsync(validationCode, { globals });
+        } catch (error) {
+          if (error instanceof Error) {
+            error.message = `Input data validation failed: ${error.message}`;
+          }
+          throw error;
+        }
+        // --- END: New Validation Logic ---
       }
       const result = await pyodide.runPythonAsync(code, { globals });
       logger.info(
@@ -110,6 +127,31 @@ export class PyodideRunner {
       );
       throw error;
     }
+  }
+
+  private _getValidationCode(): string {
+    return `
+def _validate_data_keys(data_obj):
+    if isinstance(data_obj, dict):
+        for key, value in data_obj.items():
+            if not isinstance(key, (str, int, float, bool, type(None))):
+                key_type_name = type(key).__name__
+                error_message = (
+                    f"Unsupported key type '{key_type_name}' found in input data. "
+                    "Due to data serialization limitations, dictionary keys must be JSON-compatible "
+                    "(strings, numbers, booleans, or null). "
+                    "For multi-indexed data, please use nested dictionaries."
+                )
+                raise TypeError(error_message)
+            _validate_data_keys(value)
+    elif isinstance(data_obj, list):
+        for item in data_obj:
+            _validate_data_keys(item)
+
+for var_name in __validation_target_variable_names__:
+    if var_name in globals():
+        _validate_data_keys(globals()[var_name])
+`;
   }
 
   public getOutput(sessionId: string): { stdout: string; stderr: string } {
