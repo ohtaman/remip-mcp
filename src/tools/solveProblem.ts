@@ -65,6 +65,18 @@ ${model.code}
 # --- Discovery Code ---
 import json
 import pulp
+import numpy as np
+
+# Custom JSON encoder to handle numpy types
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
 
 lp_problems = [v for v in globals().values() if isinstance(v, pulp.LpProblem)]
 
@@ -76,7 +88,7 @@ elif len(lp_problems) == 0:
 else:
     result["error"] = "Multiple pulp.LpProblem instances found. Please ensure only one is defined."
 
-json.dumps(result)
+json.dumps(result, cls=NumpyEncoder)
 `;
 
     const result = await pyodideRunner.run(sessionId, executionCode, {
