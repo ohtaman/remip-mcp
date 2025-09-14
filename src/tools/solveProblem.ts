@@ -9,6 +9,7 @@ import { logger } from '../app/logger.js';
 interface SolveProblemParams {
   model_name: string;
   data: Record<string, unknown>;
+  timeout?: number;
 }
 
 interface SolveProblemServices {
@@ -128,7 +129,7 @@ json.dumps(result, cls=NumpyEncoder)
     remipClient.on('log', logListener);
 
     const startTime = Date.now();
-    const solutionResult = await remipClient.solve(problem);
+    const solutionResult = await remipClient.solve(problem, params.timeout);
     const solveTime = (Date.now() - startTime) / 1000;
 
     remipClient.off('log', logListener);

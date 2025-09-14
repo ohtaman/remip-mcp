@@ -7,6 +7,7 @@ import type {
   ReMIPClientOptions,
   Logger,
 } from './types.js';
+import { URLSearchParams } from 'node:url';
 
 /**
  * A client for connecting to and interacting with the ReMIP (Remote MIP) Server API.
@@ -28,12 +29,15 @@ export class ReMIPClient extends EventEmitter {
     this.logger = logger;
   }
 
-  public async solve(problem: Problem): Promise<MipSolution | null> {
+  public async solve(
+    problem: Problem,
+    timeout?: number,
+  ): Promise<MipSolution | null> {
     try {
       if (this.stream) {
-        return await this.solveWithStreaming(problem);
+        return await this.solveWithStreaming(problem, timeout);
       } else {
-        return await this.solveNonStreaming(problem);
+        return await this.solveNonStreaming(problem, timeout);
       }
     } catch (error) {
       this.logger.error(
@@ -46,8 +50,15 @@ export class ReMIPClient extends EventEmitter {
 
   private async solveNonStreaming(
     problem: Problem,
+    timeout?: number,
   ): Promise<MipSolution | null> {
-    const response = await fetch(`${this.baseUrl}/solve`, {
+    const params: Record<string, string> = timeout
+      ? {
+          timeout: timeout.toString(),
+        }
+      : {};
+    const queryParams = new URLSearchParams(params);
+    const response = await fetch(`${this.baseUrl}/solve?${queryParams}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(problem),
@@ -69,8 +80,18 @@ export class ReMIPClient extends EventEmitter {
 
   private async solveWithStreaming(
     problem: Problem,
+    timeout?: number,
   ): Promise<MipSolution | null> {
-    const response = await fetch(`${this.baseUrl}/solve?stream=sse`, {
+    const params: Record<string, string> = timeout
+      ? {
+          stream: 'sse',
+          timeout: timeout.toString(),
+        }
+      : {
+          stream: 'sse',
+        };
+    const queryParams = new URLSearchParams(params);
+    const response = await fetch(`${this.baseUrl}/solve?${queryParams}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(problem),
