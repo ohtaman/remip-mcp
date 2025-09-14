@@ -25,7 +25,7 @@ const solutionSummarySchemaObject = {
       z.literal('infeasible'),
       z.literal('unbounded'),
       z.literal('not solved'),
-      z.literal('timelimit'),
+      z.literal('timeout'),
     ])
     .describe(
       `The status of the solution. Possible values are:
@@ -33,7 +33,7 @@ const solutionSummarySchemaObject = {
 - not solved: The solver was stopped before it could determine the solution status.
 - infeasible: The problem is infeasible (no solution exists).
 - unbounded: The problem is unbounded (the objective can be made infinitely large).
-- timelimit: The solver reached a time limit and returned the best solution found so far. This solution is feasible but not guaranteed to be optimal.`,
+- timeout: The solver reached a time limit and returned the best solution found so far. This solution is feasible but not guaranteed to be optimal.`,
     ),
   objective_value: z
     .number()
@@ -100,6 +100,10 @@ export const solveProblemSchema = z.object({
         '2. Complex objects (like Tuples or other objects) are **not supported** as dictionary keys. Using them will result in a `TypeError` before your model runs.\n' +
         'To prevent unexpected errors, please ensure all dictionary keys in your data are strings.',
     ),
+  timeout: z
+    .number()
+    .optional()
+    .describe('Timeout in seconds. This parameter send to the backend solver.'),
 });
 
 export const getSolutionSchema = z.object({

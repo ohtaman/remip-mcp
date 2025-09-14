@@ -3,7 +3,7 @@ import { z } from 'zod';
 // The summary returned by solve_problem and list_solutions
 export interface SolutionSummary {
   solution_id: string;
-  status: 'not solved' | 'optimal' | 'infeasible' | 'unbounded' | 'timelimit';
+  status: 'not solved' | 'optimal' | 'infeasible' | 'unbounded' | 'timeout';
   objective_value: number | null;
   solve_time_seconds: number;
 }
