@@ -246,5 +246,47 @@ describe('solveProblem Tool', () => {
         params: { message: 'Python Error' },
       });
     });
+
+    it('should send a formatted error notification for Python errors', async () => {
+      const fakeStorage = new StorageService();
+      fakeStorage.setModel(sessionId, model);
+
+      const pythonErrorMessage = `
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: must be real number, not str
+`;
+      const pythonError = {
+        type: 'PythonError',
+        message: pythonErrorMessage,
+      };
+
+      const fakePyodideRunner = {
+        run: jest.fn().mockRejectedValue(pythonError),
+      } as unknown as PyodideRunner;
+
+      const mockSendNotification = jest.fn();
+
+      const params = { model_name: 'my_model', data: {} };
+
+      await expect(
+        solveProblem(sessionId, params, {
+          storageService: fakeStorage,
+          pyodideRunner: fakePyodideRunner,
+          remipClient: createMockRemipClient({}),
+          sendNotification: mockSendNotification,
+        }),
+      ).rejects.toThrow(
+        'An error occurred in the model code execution: Error in Python model: TypeError: must be real number, not str',
+      );
+
+      expect(mockSendNotification).toHaveBeenCalledWith({
+        method: 'error',
+        params: {
+          message:
+            'Error in Python model: TypeError: must be real number, not str',
+        },
+      });
+    });
   });
 });
