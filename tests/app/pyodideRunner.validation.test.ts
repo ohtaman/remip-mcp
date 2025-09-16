@@ -21,7 +21,7 @@ describe('PyodideRunner Data Validation', () => {
       pyimport: jest
         .fn()
         .mockReturnValue({ install: jest.fn().mockResolvedValue(undefined) }),
-      runPythonAsync: jest.fn().mockResolvedValue('Success'),
+      runPythonAsync: jest.fn(), // No default implementation
       setStdout: jest.fn(),
       setStderr: jest.fn(),
       toPy: jest.fn((obj) => obj), // Simple pass-through for mock
@@ -48,12 +48,9 @@ describe('PyodideRunner Data Validation', () => {
     };
 
     // Arrange: Configure the mock to simulate the Python validation script finding a tuple key.
-    // We expect the validation script to be the first call to runPythonAsync.
     mockPyodideInstance.runPythonAsync.mockImplementation(
       async (code: string) => {
-        // A simple heuristic to identify our validation script
         if (code.includes('_validate_data_keys')) {
-          // Simulate the TypeError that the Python script would raise
           const error = new Error(
             "Unsupported key type 'tuple' found in input data.",
           );
@@ -78,6 +75,8 @@ describe('PyodideRunner Data Validation', () => {
       costs: { P1: 100, P2: 120 },
       demands: [{ region: 'north', value: 50 }],
     };
+
+    mockPyodideInstance.runPythonAsync.mockResolvedValue('Success');
 
     // Act & Assert: Expect the run method to complete without throwing.
     await expect(
