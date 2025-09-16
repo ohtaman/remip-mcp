@@ -156,15 +156,16 @@ json.dumps(result, cls=NumpyEncoder)
       reduced_costs: solutionResult.reduced_costs,
     };
 
-    logger.info({ solution }, 'Saving solution object to storage');
-    storageService.setSolution(sessionId, solution);
-
     const summary: SolutionSummary = {
       solution_id: solution.solution_id,
       status: solution.status,
       objective_value: solution.objective_value,
       solve_time_seconds: solution.solve_time_seconds,
     };
+
+    logger.info({ solution }, 'Saving solution object to storage');
+    storageService.setSolution(sessionId, solution);
+
     return summary;
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred';
