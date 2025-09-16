@@ -44,7 +44,13 @@ export const remipStatusSchema = z.object({
 
 export const mipSolutionSchema = z.object({
   name: z.string(),
-  status: z.string(),
+  status: z.enum([
+    'not solved',
+    'optimal',
+    'infeasible',
+    'unbounded',
+    'timeout',
+  ]),
   objective_value: z.number().nullable(),
   variables: z.record(z.string(), z.number()),
   mip_gap: z.number().nullable().optional(),

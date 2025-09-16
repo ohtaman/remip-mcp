@@ -127,7 +127,7 @@ describe('solveProblem Tool', () => {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
-        status: 'timelimit',
+        status: 'timeout',
         objective_value: 100,
         variables: {},
         name: 'test',
@@ -135,7 +135,7 @@ describe('solveProblem Tool', () => {
       sendNotification: async () => {},
     });
 
-    expect(result.status).toBe('timelimit');
+    expect(result.status).toBe('timeout');
     expect(result.objective_value).toBe(100);
   });
 
@@ -177,12 +177,13 @@ describe('solveProblem Tool', () => {
       } as unknown as PyodideRunner;
 
       const mockRemipClient = createMockRemipClient({});
+      const solutionStatus = 'optimal';
       mockRemipClient.solve = jest.fn().mockImplementation(async () => {
         mockRemipClient.emit('log', { message: 'Solver log 1' });
         return {
           objective_value: 123,
           variables: { x: 1 },
-          status: 'optimal',
+          status: solutionStatus,
           name: 'test',
         };
       });
@@ -215,7 +216,10 @@ describe('solveProblem Tool', () => {
       });
       expect(mockSendNotification).toHaveBeenCalledWith({
         method: 'progress',
-        params: { progress: 1.0, message: 'Problem solved successfully.' },
+        params: {
+          progress: 1.0,
+          message: expect.stringContaining(solutionStatus),
+        },
       });
       expect(mockSendNotification).toHaveBeenCalledTimes(4);
     });

@@ -134,14 +134,17 @@ json.dumps(result, cls=NumpyEncoder)
 
     remipClient.off('log', logListener);
 
-    await sendNotification({
-      method: 'progress',
-      params: { progress: 1.0, message: 'Problem solved successfully.' },
-    });
-
     if (!solutionResult) {
       throw new Error('Solver failed to produce a solution.');
     }
+
+    await sendNotification({
+      method: 'progress',
+      params: {
+        progress: 1.0,
+        message: `Solve finished in ${solveTime.toFixed(3)} seconds. Status: ${solutionResult.status}.`,
+      },
+    });
 
     const solutionId = `sol-${randomUUID()}`;
     const solution: SolutionObject = {
