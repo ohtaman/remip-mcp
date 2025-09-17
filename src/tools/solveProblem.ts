@@ -171,7 +171,7 @@ json.dumps(result, cls=NumpyEncoder)
       solve_time_seconds: solution.solve_time_seconds,
     };
 
-    logger.info({ solution }, 'Saving solution object to storage');
+    logger.info({ summary }, 'Saving solution object to storage');
     const { stdout: exec_stdout, stderr: exec_stderr } =
       pyodideRunner.getOutput(sessionId);
     storageService.setSolution(sessionId, solution);
