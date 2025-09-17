@@ -230,6 +230,9 @@ describe('solveProblem Tool', () => {
 
       const fakePyodideRunner = {
         run: jest.fn().mockRejectedValue(new Error('Python Error')),
+        getOutput: jest
+          .fn()
+          .mockReturnValue({ stdout: 'test stdout', stderr: 'test stderr' }),
       } as unknown as PyodideRunner;
 
       const mockSendNotification = jest.fn();
@@ -247,14 +250,17 @@ describe('solveProblem Tool', () => {
 
       expect(mockSendNotification).toHaveBeenCalledWith({
         method: 'error',
-        params: { message: 'Python Error' },
+        params: {
+          message: 'Python Error',
+          stdout: 'test stdout',
+          stderr: 'test stderr',
+        },
       });
     });
 
     it('should send a formatted error notification for Python errors', async () => {
       const fakeStorage = new StorageService();
       fakeStorage.setModel(sessionId, model);
-
       const pythonErrorMessage = `
 Traceback (most recent call last):
   File "<stdin>", line 1, in <module>
@@ -267,6 +273,9 @@ TypeError: must be real number, not str
 
       const fakePyodideRunner = {
         run: jest.fn().mockRejectedValue(pythonError),
+        getOutput: jest
+          .fn()
+          .mockReturnValue({ stdout: 'test stdout', stderr: 'test stderr' }),
       } as unknown as PyodideRunner;
 
       const mockSendNotification = jest.fn();
@@ -289,6 +298,8 @@ TypeError: must be real number, not str
         params: {
           message:
             'Error in Python model: TypeError: must be real number, not str',
+          stdout: 'test stdout',
+          stderr: 'test stderr',
         },
       });
     });
@@ -308,6 +319,9 @@ ZeroDivisionError: division by zero
 
       const fakePyodideRunner = {
         run: jest.fn().mockRejectedValue(pythonError),
+        getOutput: jest
+          .fn()
+          .mockReturnValue({ stdout: 'test stdout', stderr: 'test stderr' }),
       } as unknown as PyodideRunner;
 
       const mockSendNotification = jest.fn();
@@ -330,6 +344,8 @@ ZeroDivisionError: division by zero
         params: {
           message:
             'Error in Python model: A division by zero occurred. Please check your model for calculations that might result in division by zero.',
+          stdout: 'test stdout',
+          stderr: 'test stderr',
         },
       });
     });

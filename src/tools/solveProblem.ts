@@ -203,10 +203,12 @@ json.dumps(result, cls=NumpyEncoder)
       errorMessage = String(error);
     }
 
+    const { stdout, stderr } = pyodideRunner.getOutput(sessionId);
+
     // Send error notification before throwing
     await sendNotification({
       method: 'error',
-      params: { message: errorMessage },
+      params: { message: errorMessage, stdout, stderr },
     });
 
     throw new Error(
