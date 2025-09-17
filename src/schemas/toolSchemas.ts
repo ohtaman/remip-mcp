@@ -143,7 +143,21 @@ export const defineModelOutputSchema = z.object({
 export const solveProblemOutputSchema = z.object({
   summary: z
     .object(solutionSummarySchemaObject)
-    .describe('A summary of the solution.'),
+    .nullable()
+    .describe('A summary of the solution, or null if a code error occurred.'),
+  isError: z
+    .boolean()
+    .describe('Indicates if an error occurred during code execution.'),
+  stdout: z
+    .string()
+    .optional()
+    .describe('The standard output from the Python script.'),
+  stderr: z
+    .string()
+    .optional()
+    .describe(
+      'The standard error from the Python script, which will contain tracebacks on failure.',
+    ),
 });
 
 export const getSolutionOutputSchema = z.object({

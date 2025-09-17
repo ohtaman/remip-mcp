@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { StorageService } from '../app/storage.js';
 import { PyodideRunner } from '../app/pyodideRunner.js';
@@ -5,6 +6,10 @@ import { ReMIPClient } from '../connectors/remip/ReMIPClient.js';
 import { SolutionObject, SolutionSummary } from '../schemas/solutions.js';
 import { Problem } from '../connectors/remip/types.js';
 import { logger } from '../app/logger.js';
+import { solveProblemOutputSchema } from '../schemas/toolSchemas.js';
+
+// Infer the return type from the Zod schema
+type SolveProblemOutput = z.infer<typeof solveProblemOutputSchema>;
 
 interface SolveProblemParams {
   model_name: string;
@@ -31,7 +36,7 @@ export async function solveProblem(
   sessionId: string,
   params: SolveProblemParams,
   services: SolveProblemServices,
-): Promise<SolutionSummary> {
+): Promise<SolveProblemOutput> {
   const { storageService, pyodideRunner, remipClient, sendNotification } =
     services;
 
@@ -167,9 +172,16 @@ json.dumps(result, cls=NumpyEncoder)
     };
 
     logger.info({ solution }, 'Saving solution object to storage');
+    const { stdout: exec_stdout, stderr: exec_stderr } =
+      pyodideRunner.getOutput(sessionId);
     storageService.setSolution(sessionId, solution);
 
-    return summary;
+    return {
+      summary,
+      isError: false,
+      stdout: exec_stdout,
+      stderr: exec_stderr,
+    };
   } catch (error: unknown) {
     let errorMessage = 'An unknown error occurred';
 
@@ -211,8 +223,11 @@ json.dumps(result, cls=NumpyEncoder)
       params: { message: errorMessage, stdout, stderr },
     });
 
-    throw new Error(
-      `An error occurred in the model code execution: ${errorMessage}`,
-    );
+    return {
+      summary: null,
+      isError: true,
+      stdout,
+      stderr: `${errorMessage}\n${stderr}`,
+    };
   }
 }

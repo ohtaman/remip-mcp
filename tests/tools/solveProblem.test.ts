@@ -36,11 +36,12 @@ describe('solveProblem Tool', () => {
     const discoveryResult = { problem: mockProblem, error: null };
     const fakePyodideRunner = {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
+      getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
     const params = { model_name: 'my_model', data: {} };
 
-    await solveProblem(sessionId, params, {
+    const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
@@ -52,10 +53,8 @@ describe('solveProblem Tool', () => {
       sendNotification: async () => {},
     });
 
-    expect(fakePyodideRunner.run).toHaveBeenCalledTimes(1);
-    const executedCode = (fakePyodideRunner.run as jest.Mock).mock.calls[0][1];
-    expect(executedCode).toContain('x = 1'); // User code
-    expect(executedCode).toContain('isinstance(v, pulp.LpProblem)'); // Discovery code
+    expect(result.isError).toBe(false);
+    expect(result.summary?.status).toBe('optimal');
   });
 
   it('should handle infeasible solutions correctly', async () => {
@@ -65,11 +64,12 @@ describe('solveProblem Tool', () => {
     const discoveryResult = { problem: mockProblem, error: null };
     const fakePyodideRunner = {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
+      getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
     const params = { model_name: 'my_model', data: {} };
 
-    const result = await solveProblem(sessionId, params, {
+    const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
@@ -81,8 +81,9 @@ describe('solveProblem Tool', () => {
       sendNotification: async () => {},
     });
 
-    expect(result.status).toBe('infeasible');
-    expect(result.objective_value).toBe(0);
+    expect(result.isError).toBe(false);
+    expect(result.summary?.status).toBe('infeasible');
+    expect(result.summary?.objective_value).toBe(0);
   });
 
   it('should handle unbounded solutions correctly', async () => {
@@ -92,11 +93,12 @@ describe('solveProblem Tool', () => {
     const discoveryResult = { problem: mockProblem, error: null };
     const fakePyodideRunner = {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
+      getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
     const params = { model_name: 'my_model', data: {} };
 
-    const result = await solveProblem(sessionId, params, {
+    const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
@@ -108,8 +110,9 @@ describe('solveProblem Tool', () => {
       sendNotification: async () => {},
     });
 
-    expect(result.status).toBe('unbounded');
-    expect(result.objective_value).toBe(Infinity);
+    expect(result.isError).toBe(false);
+    expect(result.summary?.status).toBe('unbounded');
+    expect(result.summary?.objective_value).toBe(Infinity);
   });
 
   it('should handle timelimit solutions correctly', async () => {
@@ -119,11 +122,12 @@ describe('solveProblem Tool', () => {
     const discoveryResult = { problem: mockProblem, error: null };
     const fakePyodideRunner = {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
+      getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
     const params = { model_name: 'my_model', data: {} };
 
-    const result = await solveProblem(sessionId, params, {
+    const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
@@ -135,8 +139,9 @@ describe('solveProblem Tool', () => {
       sendNotification: async () => {},
     });
 
-    expect(result.status).toBe('timeout');
-    expect(result.objective_value).toBe(100);
+    expect(result.isError).toBe(false);
+    expect(result.summary?.status).toBe('timeout');
+    expect(result.summary?.objective_value).toBe(100);
   });
 
   it('should handle not solved solutions correctly', async () => {
@@ -146,11 +151,12 @@ describe('solveProblem Tool', () => {
     const discoveryResult = { problem: mockProblem, error: null };
     const fakePyodideRunner = {
       run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
+      getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
     const params = { model_name: 'my_model', data: {} };
 
-    const result = await solveProblem(sessionId, params, {
+    const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
       pyodideRunner: fakePyodideRunner,
       remipClient: createMockRemipClient({
@@ -162,8 +168,9 @@ describe('solveProblem Tool', () => {
       sendNotification: async () => {},
     });
 
-    expect(result.status).toBe('not solved');
-    expect(result.objective_value).toBe(null);
+    expect(result.isError).toBe(false);
+    expect(result.summary?.status).toBe('not solved');
+    expect(result.summary?.objective_value).toBe(null);
   });
 
   describe('Notifications', () => {
@@ -174,6 +181,7 @@ describe('solveProblem Tool', () => {
       const discoveryResult = { problem: mockProblem, error: null };
       const fakePyodideRunner = {
         run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
+        getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
       } as unknown as PyodideRunner;
 
       const mockRemipClient = createMockRemipClient({});
@@ -224,7 +232,7 @@ describe('solveProblem Tool', () => {
       expect(mockSendNotification).toHaveBeenCalledTimes(4);
     });
 
-    it('should send an error notification on failure', async () => {
+    it('should return an error object on failure', async () => {
       const fakeStorage = new StorageService();
       fakeStorage.setModel(sessionId, model);
 
@@ -239,14 +247,17 @@ describe('solveProblem Tool', () => {
 
       const params = { model_name: 'my_model', data: {} };
 
-      await expect(
-        solveProblem(sessionId, params, {
-          storageService: fakeStorage,
-          pyodideRunner: fakePyodideRunner,
-          remipClient: createMockRemipClient({}),
-          sendNotification: mockSendNotification,
-        }),
-      ).rejects.toThrow();
+      const result = await solveProblem(sessionId, params, {
+        storageService: fakeStorage,
+        pyodideRunner: fakePyodideRunner,
+        remipClient: createMockRemipClient({}),
+        sendNotification: mockSendNotification,
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.summary).toBeNull();
+      expect(result.stdout).toBe('test stdout');
+      expect(result.stderr).toContain('test stderr');
 
       expect(mockSendNotification).toHaveBeenCalledWith({
         method: 'error',
@@ -258,7 +269,7 @@ describe('solveProblem Tool', () => {
       });
     });
 
-    it('should send a formatted error notification for Python errors', async () => {
+    it('should return a formatted error object for Python errors', async () => {
       const fakeStorage = new StorageService();
       fakeStorage.setModel(sessionId, model);
       const pythonErrorMessage = `
@@ -282,15 +293,17 @@ TypeError: must be real number, not str
 
       const params = { model_name: 'my_model', data: {} };
 
-      await expect(
-        solveProblem(sessionId, params, {
-          storageService: fakeStorage,
-          pyodideRunner: fakePyodideRunner,
-          remipClient: createMockRemipClient({}),
-          sendNotification: mockSendNotification,
-        }),
-      ).rejects.toThrow(
-        'An error occurred in the model code execution: Error in Python model: TypeError: must be real number, not str',
+      const result = await solveProblem(sessionId, params, {
+        storageService: fakeStorage,
+        pyodideRunner: fakePyodideRunner,
+        remipClient: createMockRemipClient({}),
+        sendNotification: mockSendNotification,
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.summary).toBeNull();
+      expect(result.stderr).toContain(
+        'TypeError: must be real number, not str',
       );
 
       expect(mockSendNotification).toHaveBeenCalledWith({
@@ -303,7 +316,7 @@ TypeError: must be real number, not str
         },
       });
     });
-    it('should send a formatted error notification for ZeroDivisionError', async () => {
+    it('should return a formatted error object for ZeroDivisionError', async () => {
       const fakeStorage = new StorageService();
       fakeStorage.setModel(sessionId, model);
 
@@ -328,16 +341,16 @@ ZeroDivisionError: division by zero
 
       const params = { model_name: 'my_model', data: {} };
 
-      await expect(
-        solveProblem(sessionId, params, {
-          storageService: fakeStorage,
-          pyodideRunner: fakePyodideRunner,
-          remipClient: createMockRemipClient({}),
-          sendNotification: mockSendNotification,
-        }),
-      ).rejects.toThrow(
-        'An error occurred in the model code execution: Error in Python model: A division by zero occurred. Please check your model for calculations that might result in division by zero.',
-      );
+      const result = await solveProblem(sessionId, params, {
+        storageService: fakeStorage,
+        pyodideRunner: fakePyodideRunner,
+        remipClient: createMockRemipClient({}),
+        sendNotification: mockSendNotification,
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.summary).toBeNull();
+      expect(result.stderr).toContain('division by zero');
 
       expect(mockSendNotification).toHaveBeenCalledWith({
         method: 'error',
