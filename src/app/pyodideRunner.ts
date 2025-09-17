@@ -129,6 +129,13 @@ export class PyodideRunner {
     }
   }
 
+  public getOutput(sessionId: string): { stdout: string; stderr: string } {
+    return {
+      stdout: this.stdoutBuffer.get(sessionId) || '',
+      stderr: this.stderrBuffer.get(sessionId) || '',
+    };
+  }
+
   private _getValidationCode(): string {
     return `
 def _validate_data_keys(data_obj):
@@ -152,12 +159,5 @@ for var_name in __validation_target_variable_names__:
     if var_name in globals():
         _validate_data_keys(globals()[var_name])
 `;
-  }
-
-  public getOutput(sessionId: string): { stdout: string; stderr: string } {
-    return {
-      stdout: this.stdoutBuffer.get(sessionId) || '',
-      stderr: this.stderrBuffer.get(sessionId) || '',
-    };
   }
 }
