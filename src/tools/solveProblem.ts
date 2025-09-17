@@ -166,7 +166,7 @@ json.dumps(result, cls=NumpyEncoder)
       solve_time_seconds: solution.solve_time_seconds,
     };
 
-    logger.info({ solution }, 'Saving solution object to storage');
+    logger.info({ summary }, 'Saving solution object to storage');
     storageService.setSolution(sessionId, solution);
 
     return summary;
