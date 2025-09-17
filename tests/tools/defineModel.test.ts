@@ -56,16 +56,12 @@ prob += x
     });
 
     expect(result.status).toBe('ok');
-    expect(pyodideRunner.run).toHaveBeenCalledWith(
-      sessionId,
-      expect.any(String), // PRE_PROCESS_SCRIPT
-      { globals: { sample_data: { n: 10 } } },
-    );
-    expect(pyodideRunner.run).toHaveBeenCalledWith(
-      sessionId,
-      validModelCode,
-      { globals: { n: 10 } },
-    );
+    const calls = pyodideRunner.run.mock.calls;
+    expect(calls.length).toBe(2);
+    expect(calls[0][1]).toContain('preprocess_data');
+    expect(calls[0][2]).toEqual({ globals: { sample_data: { n: 10 } } });
+    expect(calls[1][1]).toContain(validModelCode);
+    expect(calls[1][2]).toEqual({ globals: { n: 10 } });
   });
 
   // T003
@@ -162,7 +158,9 @@ prob += x[0]
 
     await expect(
       defineModel(sessionId, params, { storageService, pyodideRunner }),
-    ).rejects.toThrow('Error executing model with sample data');
+    ).rejects.toThrow(
+      'Error executing model: NameError: name "x" is not defined',
+    );
   });
 
   // T105
