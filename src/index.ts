@@ -105,6 +105,7 @@ async function setupMcpServer(
     async (params: z.infer<typeof defineModelSchema>, extra: McpExtraArgs) => {
       const result = await defineModel(extra.sessionId!, params, {
         storageService,
+        pyodideRunner,
       });
 
       return {
@@ -134,12 +135,9 @@ async function setupMcpServer(
       pyodideRunner,
       sendNotification: extra.sendNotification,
     });
-    const structuredContent = {
-      summary: result,
-    };
     return {
-      content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
-      structuredContent,
+      content: [{ type: 'text', text: JSON.stringify(result) }],
+      structuredContent: result,
     };
   };
 

@@ -11,9 +11,6 @@ const modelSchemaObject = {
     .describe(
       'The type of the model object. Currently only supports pulp.LpProblem.',
     ),
-  inputs: z
-    .array(z.string())
-    .describe('The list of input variable names the model requires.'),
 };
 
 // Base object for SolutionSummary
@@ -80,10 +77,11 @@ export const defineModelSchema = z.object({
     .describe(
       'The Python code defining the PuLP model. Must define only one pulp.LpProblem instance globally. You can use PuLP (model definition only), NumPy and Pandas.',
     ),
-  inputs: z
-    .array(z.string())
+  sample_data: z
+    .record(z.string(), z.unknown())
+    .optional()
     .describe(
-      'A list of input data variable names required by the model code for `solve_problem`. The input data will be injected as a list or dictionary before the code is executed. Each name must be a valid Python variable name.',
+      "Optional. A dictionary of sample data to validate the model against. This data will be made available as global variables to your Python code during validation. Keys must be strings. For complex data structures like dictionaries with tuple keys, provide them as a string representation that can be parsed by Python's `ast.literal_eval`. For example, `{\"('A', 'B'): 100}\"`.",
     ),
 });
 
@@ -92,13 +90,9 @@ export const solveProblemSchema = z.object({
     .string()
     .describe('The name of the pre-defined model to use for solving.'),
   data: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .describe(
-      'A dictionary of input data which will be made available as global variables to your Python code.\n' +
-        '**Note on Data Conversion**: The JavaScript data object you provide is automatically converted into Python objects. This process has limitations similar to JSON serialization:\n' +
-        '1. Dictionary keys should be strings. Non-string primitive keys (like numbers) may be converted to strings.\n' +
-        '2. Complex objects (like Tuples or other objects) are **not supported** as dictionary keys. Using them will result in a `TypeError` before your model runs.\n' +
-        'To prevent unexpected errors, please ensure all dictionary keys in your data are strings.',
+      "A dictionary of input data which will be made available as global variables to your Python code. Keys must be strings. For complex data structures like dictionaries with tuple keys, provide them as a string representation that can be parsed by Python's `ast.literal_eval`. For example, `{\"('A', 'B'): 100}\"`.",
     ),
   timeout: z
     .number()
