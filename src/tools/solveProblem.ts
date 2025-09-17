@@ -128,7 +128,7 @@ json.dumps(result, cls=NumpyEncoder)
     const logListener = (log: { message: string }) => {
       sendNotification({
         method: 'log',
-        params: { message: `[Solver] ${log.message}` },
+        params: { progress: -1, message: `[Solver] ${log.message}` },
       });
     };
     remipClient.on('log', logListener);
