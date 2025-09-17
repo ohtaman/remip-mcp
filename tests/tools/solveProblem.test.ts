@@ -174,7 +174,7 @@ describe('solveProblem Tool', () => {
   });
 
   describe('Notifications', () => {
-    it('should send progress and log notifications on success', async () => {
+    it('should send enriched log notifications on success', async () => {
       const fakeStorage = new StorageService();
       fakeStorage.setModel(sessionId, model);
 
@@ -220,7 +220,7 @@ describe('solveProblem Tool', () => {
       });
       expect(mockSendNotification).toHaveBeenCalledWith({
         method: 'log',
-        params: { message: '[Solver] Solver log 1' },
+        params: { progress: -1, message: '[Solver] Solver log 1' },
       });
       expect(mockSendNotification).toHaveBeenCalledWith({
         method: 'progress',
