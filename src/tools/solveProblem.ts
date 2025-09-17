@@ -181,11 +181,16 @@ json.dumps(result, cls=NumpyEncoder)
       typeof (error as { message: unknown }).message === 'string'
     ) {
       const message = (error as { message: string }).message;
-      const lines = message.trim().split('\n');
-      const lastLine = lines.filter((line) => line.trim() !== '').pop();
-      errorMessage = `Error in Python model: ${
-        lastLine || 'Unknown Python error'
-      }`;
+      if (message.includes('ZeroDivisionError')) {
+        errorMessage =
+          'Error in Python model: A division by zero occurred. Please check your model for calculations that might result in division by zero.';
+      } else {
+        const lines = message.trim().split('\n');
+        const lastLine = lines.filter((line) => line.trim() !== '').pop();
+        errorMessage = `Error in Python model: ${
+          lastLine || 'Unknown Python error'
+        }`;
+      }
     } else if (error instanceof Error) {
       errorMessage = error.message;
     } else if (

@@ -292,5 +292,46 @@ TypeError: must be real number, not str
         },
       });
     });
+    it('should send a formatted error notification for ZeroDivisionError', async () => {
+      const fakeStorage = new StorageService();
+      fakeStorage.setModel(sessionId, model);
+
+      const pythonErrorMessage = `
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ZeroDivisionError: division by zero
+`;
+      const pythonError = {
+        type: 'PythonError',
+        message: pythonErrorMessage,
+      };
+
+      const fakePyodideRunner = {
+        run: jest.fn().mockRejectedValue(pythonError),
+      } as unknown as PyodideRunner;
+
+      const mockSendNotification = jest.fn();
+
+      const params = { model_name: 'my_model', data: {} };
+
+      await expect(
+        solveProblem(sessionId, params, {
+          storageService: fakeStorage,
+          pyodideRunner: fakePyodideRunner,
+          remipClient: createMockRemipClient({}),
+          sendNotification: mockSendNotification,
+        }),
+      ).rejects.toThrow(
+        'An error occurred in the model code execution: Error in Python model: A division by zero occurred. Please check your model for calculations that might result in division by zero.',
+      );
+
+      expect(mockSendNotification).toHaveBeenCalledWith({
+        method: 'error',
+        params: {
+          message:
+            'Error in Python model: A division by zero occurred. Please check your model for calculations that might result in division by zero.',
+        },
+      });
+    });
   });
 });
