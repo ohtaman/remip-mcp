@@ -13,7 +13,6 @@ describe('Auxiliary Tools', () => {
     name: 'm1',
     code: 'c1',
     type: 'pulp.LpProblem',
-    inputs: [],
   };
   const solution1: SolutionObject = {
     solution_id: 's1',

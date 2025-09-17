@@ -15,13 +15,11 @@ describe('StorageService', () => {
       name: 'model1',
       code: 'code1',
       type: 'pulp.LpProblem',
-      inputs: ['a'],
     };
     const model2: Model = {
       name: 'model2',
       code: 'code2',
       type: 'pulp.LpProblem',
-      inputs: ['b'],
     };
 
     it('should set and get a model', () => {
@@ -106,7 +104,6 @@ describe('StorageService', () => {
         name: 'm1',
         code: 'c1',
         type: 'pulp.LpProblem',
-        inputs: [],
       };
       const solution: SolutionObject = {
         solution_id: 's1',

@@ -13,7 +13,6 @@ describe('solveProblem Tool', () => {
     name: 'my_model',
     code: 'x = 1',
     type: 'pulp.LpProblem',
-    inputs: [],
   };
 
   const mockProblem: Problem = {
@@ -171,6 +170,36 @@ describe('solveProblem Tool', () => {
     expect(result.isError).toBe(false);
     expect(result.summary?.status).toBe('not solved');
     expect(result.summary?.objective_value).toBe(null);
+  });
+
+  it('should correctly preprocess data with tuple-keyed dictionaries', async () => {
+    const fakeStorage = new StorageService();
+    const modelWithTupleKey = { ...model, code: "prob += my_dict[ ('a', 'b')]" };
+    fakeStorage.setModel(sessionId, modelWithTupleKey);
+
+    const discoveryResult = { problem: mockProblem, error: null };
+    const fakePyodideRunner = {
+      run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
+      getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
+    } as unknown as PyodideRunner;
+
+    const params = {
+      model_name: 'my_model',
+      data: { my_dict: "{ ('a', 'b'): 1}" },
+    };
+
+    await solveProblem(sessionId, params, {
+      storageService: fakeStorage,
+      pyodideRunner: fakePyodideRunner,
+      remipClient: createMockRemipClient({ status: 'optimal' }),
+      sendNotification: async () => {},
+    });
+
+    expect(fakePyodideRunner.run).toHaveBeenCalledWith(
+      sessionId,
+      expect.stringContaining('ast.literal_eval'),
+      expect.any(Object),
+    );
   });
 
   describe('Notifications', () => {

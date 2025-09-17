@@ -51,20 +51,24 @@ export async function solveProblem(
       throw new Error(`Model not found: ${params.model_name}`);
     }
 
-    const requiredInputs = new Set(model.inputs);
-    const providedInputs = new Set(Object.keys(params.data));
-    if (
-      requiredInputs.size !== providedInputs.size ||
-      ![...requiredInputs].every((key) => providedInputs.has(key as string))
-    ) {
-      throw new Error(
-        `Input data does not match model inputs. Required: ${model.inputs.join(
-          ',',
-        )}. Provided: ${Object.keys(params.data).join(',')}`,
-      );
-    }
+    const PRE_PROCESS_SCRIPT = `
+import ast
+
+def preprocess_data(data):
+    for key, value in data.items():
+        if isinstance(value, str):
+            try:
+                data[key] = ast.literal_eval(value)
+            except (ValueError, SyntaxError):
+                pass
+    return data
+
+globals().update(preprocess_data(globals()))
+`;
 
     const executionCode = `
+${PRE_PROCESS_SCRIPT}
+
 # --- User's Model Code ---
 ${model.code}
 
