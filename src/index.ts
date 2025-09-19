@@ -22,7 +22,7 @@ import { z } from 'zod';
 import { defineModel } from './tools/defineModel.js';
 import { solveProblem } from './tools/solveProblem.js';
 import { getSolution } from './tools/getSolution.js';
-import { processSolution } from './tools/processSolution.js';
+import { validateSolution as validateSolution } from './tools/validateSolution.js';
 import { listModels } from './tools/listModels.js';
 import { getModel } from './tools/getModel.js';
 import { listSolutions } from './tools/listSolutions.js';
@@ -30,14 +30,14 @@ import {
   defineModelSchema,
   getModelSchema,
   getSolutionSchema,
-  processSolutionSchema,
+  validateSolutionSchema,
   solveProblemSchema,
   defineModelOutputSchema,
   getModelOutputSchema,
   getSolutionOutputSchema,
   listModelsOutputSchema,
   listSolutionsOutputSchema,
-  processSolutionOutputSchema,
+  validateSolutionOutputSchema,
   solveProblemOutputSchema,
 } from './schemas/toolSchemas.js';
 
@@ -98,7 +98,7 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'define_model',
     {
-      description: 'Defines a optimization model template.',
+      description: 'Defines a reusable optimization model *template*.',
       inputSchema: defineModelSchema.shape,
       outputSchema: defineModelOutputSchema.shape,
     },
@@ -144,8 +144,9 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'solve_problem',
     {
-      description:
-        'Executes an optimization run using a pre-defined model and specific input data. Process: Execute model code with input data as global variables → discover single LpProblem from globals → solve via ReMIP → return summary.',
+      description: `Executes an optimization run by combining a pre-defined model template with a specific dataset.
+
+      Process: The system retrieves the 'model_code' from the named model. It then makes the provided 'data' dictionary available as global variables. Finally, it executes the 'model_code' to build and solve the problem.`,
       inputSchema: solveProblemSchema.shape,
       outputSchema: solveProblemOutputSchema.shape,
     },
@@ -175,18 +176,18 @@ async function setupMcpServer(
   );
 
   mcpServer.registerTool(
-    'process_solution',
+    'validate_solution',
     {
       description:
-        'Processes a solution using a Python script and returns the result.',
-      inputSchema: processSolutionSchema.shape,
-      outputSchema: processSolutionOutputSchema.shape,
+        "Validates a solution against core constraints and can also be used for reporting. A solution is NOT to be trusted until it is independently verified with this function. The primary purpose of this tool is to run code that checks the solution's variables against the problem's hard constraints (e.g., resource capacity, skill availability, product compatibility).",
+      inputSchema: validateSolutionSchema.shape,
+      outputSchema: validateSolutionOutputSchema.shape,
     },
     async (
-      params: z.infer<typeof processSolutionSchema>,
+      params: z.infer<typeof validateSolutionSchema>,
       extra: McpExtraArgs,
     ) => {
-      const result = await processSolution(extra.sessionId!, params, {
+      const result = await validateSolution(extra.sessionId!, params, {
         storageService,
         pyodideRunner,
       });
