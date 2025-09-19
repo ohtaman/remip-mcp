@@ -81,18 +81,20 @@ export const defineModelSchema = z.object({
     .record(z.string(), z.unknown())
     .optional()
     .describe(
-      "Optional. A dictionary of sample data to validate the model against. This data will be made available as global variables to your Python code during validation. Keys must be strings. For complex data structures like dictionaries with tuple keys, provide them as a string representation that can be parsed by Python's `ast.literal_eval`. For example, `{\"('A', 'B'): 100}\"`.",
+      'Optional. A dictionary of sample data to validate the model\'s structure *at definition time*. This data is used to validate the code\'s structure upon definition. This data is made available as global variables during this function\'s execution to catch immediate errors. It should mirror the structure of the data that `solve_problem` will eventually use. For complex data structures like a Pandas DataFrame, provide it as a string that can be executed (e.g., `{"my_df": "pd.DataFrame(...)"}`).',
     ),
 });
 
 export const solveProblemSchema = z.object({
   model_name: z
     .string()
-    .describe('The name of the pre-defined model to use for solving.'),
+    .describe(
+      'The name of the pre-defined model template (from `define_model`) to use.',
+    ),
   data: z
     .record(z.string(), z.unknown())
     .describe(
-      "A dictionary of input data which will be made available as global variables to your Python code. Keys must be strings. For complex data structures like dictionaries with tuple keys, provide them as a string representation that can be parsed by Python's `ast.literal_eval`. For example, `{\"('A', 'B'): 100}\"`.",
+      'A dictionary of input data to be injected as global variables into the model\'s execution environment. The keys must match the variable names expected by the model code. For complex data like a Pandas DataFrame, provide it as a string that can be executed (e.g., `{"workers_df": "pd.DataFrame(...)"}`)',
     ),
   timeout: z
     .number()
@@ -111,12 +113,12 @@ export const getSolutionSchema = z.object({
     ),
 });
 
-export const processSolutionSchema = z.object({
+export const validateSolutionSchema = z.object({
   solution_id: z.string().describe('The ID of the solution to process.'),
-  processing_code: z
+  validation_code: z
     .string()
     .describe(
-      "A Python script to process the solution. The solution object is available as a global dictionary named 'solution'. You can use PuLP (model definition only), NumPy and Pandas.",
+      "A Python script to process the solution. The solution object is available as a global dictionary named 'solution'. This code must be a self-contained script that rebuilds necessary data (e.g., from the problem description) to ensure an unbiased check. You can use PuLP (model definition only), NumPy and Pandas.",
     ),
 });
 
@@ -160,10 +162,10 @@ export const getSolutionOutputSchema = z.object({
     .describe('The complete solution object, including variable values.'),
 });
 
-export const processSolutionOutputSchema = z.object({
+export const validateSolutionOutputSchema = z.object({
   result: z
     .string()
-    .describe('The JSON-serialized return value of the processing script.'),
+    .describe('The JSON-serialized return value of the validateion script.'),
   stdout: z
     .string()
     .describe("Any output captured from the script's standard output."),

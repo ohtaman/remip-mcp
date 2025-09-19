@@ -1,27 +1,27 @@
 import { StorageService } from '../app/storage.js';
 import { PyodideRunner } from '../app/pyodideRunner.js';
 
-interface ProcessSolutionParams {
+interface ValidateSolutionParams {
   solution_id: string;
-  processing_code: string;
+  validation_code: string;
 }
 
-interface ProcessSolutionOutputs {
+interface ValidateSolutionOutputs {
   result: string;
   stdout: string;
   stderr: string;
 }
 
-interface ProcessSolutionServices {
+interface ValidateSolutionServices {
   storageService: StorageService;
   pyodideRunner: PyodideRunner;
 }
 
-export async function processSolution(
+export async function validateSolution(
   sessionId: string,
-  params: ProcessSolutionParams,
-  services: ProcessSolutionServices,
-): Promise<ProcessSolutionOutputs> {
+  params: ValidateSolutionParams,
+  services: ValidateSolutionServices,
+): Promise<ValidateSolutionOutputs> {
   const { storageService, pyodideRunner } = services;
   const solution = storageService.getSolution(sessionId, params.solution_id);
 
@@ -36,7 +36,7 @@ import json
 solution = json.loads('''${solutionJson}''')
 
 # --- User's Code ---
-${params.processing_code}
+${params.validation_code}
 `;
 
   const result = await pyodideRunner.run(sessionId, fullCode);
