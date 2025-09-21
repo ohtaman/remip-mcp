@@ -89,16 +89,15 @@ async function setupMcpServer(
     {
       capabilities: {
         tools: {},
+        logging: {},
       },
     },
   );
 
-  // --- Register New Tools ---
-
   mcpServer.registerTool(
     'define_model',
     {
-      description: 'Defines a reusable optimization model *template*.',
+      description: 'Defines a reusable optimization model.',
       inputSchema: defineModelSchema.shape,
       outputSchema: defineModelOutputSchema.shape,
     },
@@ -144,9 +143,7 @@ async function setupMcpServer(
   mcpServer.registerTool(
     'solve_problem',
     {
-      description: `Executes an optimization run by combining a pre-defined model template with a specific dataset.
-
-      Process: The system retrieves the 'model_code' from the named model. It then makes the provided 'data' dictionary available as global variables. Finally, it executes the 'model_code' to build and solve the problem.`,
+      description: `Executes an optimization with a pre-defined model. The system retrieves the 'model_code' from the named model and executes the 'model_code' to build and solve the problem.`,
       inputSchema: solveProblemSchema.shape,
       outputSchema: solveProblemOutputSchema.shape,
     },

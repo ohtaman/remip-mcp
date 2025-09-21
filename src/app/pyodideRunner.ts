@@ -121,9 +121,9 @@ export class PyodideRunner {
       );
       return result;
     } catch (error) {
-      logger.error(
+      logger.warn(
         { err: error, code, sessionId },
-        '[PyodideRunner] Error during Python execution',
+        '[PyodideRunner] Python execution failed (user code error)',
       );
       throw error;
     }

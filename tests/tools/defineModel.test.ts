@@ -42,50 +42,6 @@ prob += x
     expect(model?.name).toBe(modelName);
     expect(model?.code).toBe(validModelCode);
   });
-  // T002
-  it('should define a model with valid code and sample data', async () => {
-    const params = {
-      model_name: modelName,
-      model_code: validModelCode,
-      sample_data: { n: 10 },
-    };
-
-    const result = await defineModel(sessionId, params, {
-      storageService,
-      pyodideRunner,
-    });
-
-    expect(result.status).toBe('ok');
-    const calls = pyodideRunner.run.mock.calls;
-    expect(calls.length).toBe(2);
-    expect(calls[0][1]).toContain('preprocess_data');
-    expect(calls[0][2]).toEqual({ globals: { sample_data: { n: 10 } } });
-    expect(calls[1][1]).toContain(validModelCode);
-    expect(calls[1][2]).toEqual({ globals: { n: 10 } });
-  });
-
-  // T003
-  it('should handle tuple-keyed dictionaries in sample data', async () => {
-    const modelCodeWithTupleKey = `
-import pulp
-prob = pulp.LpProblem("test_problem")
-x = pulp.LpVariable("x", 0, 1)
-prob += x * my_dict[ ('a', 'b')]
-`;
-    const params = {
-      model_name: modelName,
-      model_code: modelCodeWithTupleKey,
-      sample_data: { my_dict: "{ ('a', 'b'): 1}" },
-    };
-
-    await defineModel(sessionId, params, { storageService, pyodideRunner });
-
-    expect(pyodideRunner.run).toHaveBeenCalledWith(
-      sessionId,
-      expect.stringContaining('ast.literal_eval'),
-      expect.any(Object),
-    );
-  });
 
   // T101
   it('should throw a syntax error for invalid model code', async () => {
@@ -99,7 +55,7 @@ prob += x * my_dict[ ('a', 'b')]
 
     await expect(
       defineModel(sessionId, params, { storageService, pyodideRunner }),
-    ).rejects.toThrow('Invalid Python syntax in model code');
+    ).rejects.toThrow('Error executing model: SyntaxError');
   });
 
   // T102
@@ -137,7 +93,7 @@ p2 = pulp.LpProblem()
   });
 
   // T104
-  it('should throw a runtime error if sample data is invalid', async () => {
+  it('should throw a runtime error for invalid model code', async () => {
     const modelCode = `
 import pulp
 prob = pulp.LpProblem()
@@ -153,7 +109,6 @@ prob += x[0]
     const params = {
       model_name: modelName,
       model_code: modelCode,
-      sample_data: { y: [1, 2] },
     };
 
     await expect(
@@ -161,20 +116,5 @@ prob += x[0]
     ).rejects.toThrow(
       'Error executing model: NameError: name "x" is not defined',
     );
-  });
-
-  // T105
-  it('should throw an error for invalid literal string in sample data', async () => {
-    pyodideRunner.run.mockRejectedValue(new Error('ValueError'));
-
-    const params = {
-      model_name: modelName,
-      model_code: validModelCode,
-      sample_data: { my_dict: 'not a valid dict' },
-    };
-
-    await expect(
-      defineModel(sessionId, params, { storageService, pyodideRunner }),
-    ).rejects.toThrow('Failed to parse string literal');
   });
 });

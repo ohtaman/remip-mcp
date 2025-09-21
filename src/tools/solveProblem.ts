@@ -13,7 +13,6 @@ type SolveProblemOutput = z.infer<typeof solveProblemOutputSchema>;
 
 interface SolveProblemParams {
   model_name: string;
-  data: Record<string, unknown>;
   timeout?: number;
 }
 
@@ -51,24 +50,7 @@ export async function solveProblem(
       throw new Error(`Model not found: ${params.model_name}`);
     }
 
-    const PRE_PROCESS_SCRIPT = `
-import ast
-
-def preprocess_data(data):
-    for key, value in data.items():
-        if isinstance(value, str):
-            try:
-                data[key] = ast.literal_eval(value)
-            except (ValueError, SyntaxError):
-                pass
-    return data
-
-globals().update(preprocess_data(globals()))
-`;
-
     const executionCode = `
-${PRE_PROCESS_SCRIPT}
-
 # --- User's Model Code ---
 ${model.code}
 
@@ -101,9 +83,7 @@ else:
 json.dumps(result, cls=NumpyEncoder)
 `;
 
-    const result = await pyodideRunner.run(sessionId, executionCode, {
-      globals: { ...params.data },
-    });
+    const result = await pyodideRunner.run(sessionId, executionCode);
 
     await sendNotification({
       method: 'progress',
@@ -131,8 +111,12 @@ json.dumps(result, cls=NumpyEncoder)
 
     const logListener = (log: { message: string }) => {
       sendNotification({
-        method: 'log',
-        params: { progress: -1, message: `[Solver] ${log.message}` },
+        method: 'notifications/message',
+        params: {
+          level: 'info',
+          data: log.message,
+          logger: 'Solver',
+        },
       });
     };
     remipClient.on('log', logListener);
@@ -223,8 +207,11 @@ json.dumps(result, cls=NumpyEncoder)
 
     // Send error notification before throwing
     await sendNotification({
-      method: 'error',
-      params: { message: errorMessage, stdout, stderr },
+      method: 'notifications/message',
+      params: {
+        level: 'error',
+        data: errorMessage,
+      },
     });
 
     return {
