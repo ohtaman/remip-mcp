@@ -38,7 +38,7 @@ describe('solveProblem Tool', () => {
       getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
-    const params = { model_name: 'my_model', data: {} };
+    const params = { model_name: 'my_model' };
 
     const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
@@ -66,7 +66,7 @@ describe('solveProblem Tool', () => {
       getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
-    const params = { model_name: 'my_model', data: {} };
+    const params = { model_name: 'my_model' };
 
     const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
@@ -95,7 +95,7 @@ describe('solveProblem Tool', () => {
       getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
-    const params = { model_name: 'my_model', data: {} };
+    const params = { model_name: 'my_model' };
 
     const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
@@ -124,7 +124,7 @@ describe('solveProblem Tool', () => {
       getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
-    const params = { model_name: 'my_model', data: {} };
+    const params = { model_name: 'my_model' };
 
     const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
@@ -153,7 +153,7 @@ describe('solveProblem Tool', () => {
       getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
     } as unknown as PyodideRunner;
 
-    const params = { model_name: 'my_model', data: {} };
+    const params = { model_name: 'my_model' };
 
     const result: any = await solveProblem(sessionId, params, {
       storageService: fakeStorage,
@@ -170,36 +170,6 @@ describe('solveProblem Tool', () => {
     expect(result.isError).toBe(false);
     expect(result.summary?.status).toBe('not solved');
     expect(result.summary?.objective_value).toBe(null);
-  });
-
-  it('should correctly preprocess data with tuple-keyed dictionaries', async () => {
-    const fakeStorage = new StorageService();
-    const modelWithTupleKey = { ...model, code: "prob += my_dict[ ('a', 'b')]" };
-    fakeStorage.setModel(sessionId, modelWithTupleKey);
-
-    const discoveryResult = { problem: mockProblem, error: null };
-    const fakePyodideRunner = {
-      run: jest.fn().mockResolvedValue(JSON.stringify(discoveryResult)),
-      getOutput: jest.fn().mockReturnValue({ stdout: '', stderr: '' }),
-    } as unknown as PyodideRunner;
-
-    const params = {
-      model_name: 'my_model',
-      data: { my_dict: "{ ('a', 'b'): 1}" },
-    };
-
-    await solveProblem(sessionId, params, {
-      storageService: fakeStorage,
-      pyodideRunner: fakePyodideRunner,
-      remipClient: createMockRemipClient({ status: 'optimal' }),
-      sendNotification: async () => {},
-    });
-
-    expect(fakePyodideRunner.run).toHaveBeenCalledWith(
-      sessionId,
-      expect.stringContaining('ast.literal_eval'),
-      expect.any(Object),
-    );
   });
 
   describe('Notifications', () => {
@@ -227,7 +197,7 @@ describe('solveProblem Tool', () => {
 
       const mockSendNotification = jest.fn();
 
-      const params = { model_name: 'my_model', data: {} };
+      const params = { model_name: 'my_model' };
 
       await solveProblem(sessionId, params, {
         storageService: fakeStorage,
@@ -248,8 +218,12 @@ describe('solveProblem Tool', () => {
         },
       });
       expect(mockSendNotification).toHaveBeenCalledWith({
-        method: 'log',
-        params: { progress: -1, message: '[Solver] Solver log 1' },
+        method: 'notifications/message',
+        params: {
+          level: 'info',
+          data: 'Solver log 1',
+          logger: 'Solver',
+        },
       });
       expect(mockSendNotification).toHaveBeenCalledWith({
         method: 'progress',
@@ -274,7 +248,7 @@ describe('solveProblem Tool', () => {
 
       const mockSendNotification = jest.fn();
 
-      const params = { model_name: 'my_model', data: {} };
+      const params = { model_name: 'my_model' };
 
       const result = await solveProblem(sessionId, params, {
         storageService: fakeStorage,
@@ -289,11 +263,10 @@ describe('solveProblem Tool', () => {
       expect(result.stderr).toContain('test stderr');
 
       expect(mockSendNotification).toHaveBeenCalledWith({
-        method: 'error',
+        method: 'notifications/message',
         params: {
-          message: 'Python Error',
-          stdout: 'test stdout',
-          stderr: 'test stderr',
+          level: 'error',
+          data: 'Python Error',
         },
       });
     });
@@ -320,7 +293,7 @@ TypeError: must be real number, not str
 
       const mockSendNotification = jest.fn();
 
-      const params = { model_name: 'my_model', data: {} };
+      const params = { model_name: 'my_model' };
 
       const result = await solveProblem(sessionId, params, {
         storageService: fakeStorage,
@@ -336,12 +309,10 @@ TypeError: must be real number, not str
       );
 
       expect(mockSendNotification).toHaveBeenCalledWith({
-        method: 'error',
+        method: 'notifications/message',
         params: {
-          message:
-            'Error in Python model: TypeError: must be real number, not str',
-          stdout: 'test stdout',
-          stderr: 'test stderr',
+          level: 'error',
+          data: 'Error in Python model: TypeError: must be real number, not str',
         },
       });
     });
@@ -368,7 +339,7 @@ ZeroDivisionError: division by zero
 
       const mockSendNotification = jest.fn();
 
-      const params = { model_name: 'my_model', data: {} };
+      const params = { model_name: 'my_model' };
 
       const result = await solveProblem(sessionId, params, {
         storageService: fakeStorage,
@@ -382,12 +353,10 @@ ZeroDivisionError: division by zero
       expect(result.stderr).toContain('division by zero');
 
       expect(mockSendNotification).toHaveBeenCalledWith({
-        method: 'error',
+        method: 'notifications/message',
         params: {
-          message:
-            'Error in Python model: A division by zero occurred. Please check your model for calculations that might result in division by zero.',
-          stdout: 'test stdout',
-          stderr: 'test stderr',
+          level: 'error',
+          data: 'Error in Python model: A division by zero occurred. Please check your model for calculations that might result in division by zero.',
         },
       });
     });

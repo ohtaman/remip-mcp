@@ -5,33 +5,12 @@ import { Model } from '../schemas/models.js';
 interface DefineModelParams {
   model_name: string;
   model_code: string;
-  sample_data?: Record<string, unknown>;
 }
 
 interface DefineModelServices {
   storageService: StorageService;
   pyodideRunner: PyodideRunner;
 }
-
-const PRE_PROCESS_SCRIPT = `
-import ast
-
-def preprocess_data(data):
-    for key, value in data.items():
-        if isinstance(value, str):
-            try:
-                data[key] = ast.literal_eval(value)
-            except (ValueError, SyntaxError):
-                # Keep the original string if it's not a valid literal
-                pass
-    return data
-
-# Pre-process the injected sample_data if it exists
-if 'sample_data' in globals():
-    sample_data = preprocess_data(sample_data)
-    # Unpack the pre-processed data into the global scope
-    globals().update(sample_data)
-`;
 
 const DISCOVERY_SCRIPT = `
 import pulp
@@ -46,20 +25,6 @@ async function _validateModelCode(
   model_code: string,
   sample_data?: Record<string, unknown>,
 ) {
-  try {
-    await pyodideRunner.run(sessionId, PRE_PROCESS_SCRIPT, {
-      globals: { sample_data: sample_data || {} },
-    });
-  } catch (e: unknown) {
-    if (e instanceof Error) {
-      if (e.message.includes('SyntaxError')) {
-        throw new Error(`Invalid Python syntax in model code: ${e.message}`);
-      }
-      throw new Error(`Failed to parse string literal: ${e.message}`);
-    }
-    throw new Error('An unknown error occurred while parsing string literal.');
-  }
-
   const validationScript = `
 ${model_code}
 
@@ -105,12 +70,7 @@ export async function defineModel(
 
   const { storageService, pyodideRunner } = services;
 
-  await _validateModelCode(
-    sessionId,
-    pyodideRunner,
-    params.model_code,
-    params.sample_data,
-  );
+  await _validateModelCode(sessionId, pyodideRunner, params.model_code);
 
   const model: Model = {
     name: params.model_name,

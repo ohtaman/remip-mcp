@@ -77,12 +77,6 @@ export const defineModelSchema = z.object({
     .describe(
       'The Python code defining the PuLP model. Must define only one pulp.LpProblem instance globally. You can use PuLP (model definition only), NumPy and Pandas.',
     ),
-  sample_data: z
-    .record(z.string(), z.unknown())
-    .optional()
-    .describe(
-      'Optional. A dictionary of sample data to validate the model\'s structure *at definition time*. This data is used to validate the code\'s structure upon definition. This data is made available as global variables during this function\'s execution to catch immediate errors. It should mirror the structure of the data that `solve_problem` will eventually use. For complex data structures like a Pandas DataFrame, provide it as a string that can be executed (e.g., `{"my_df": "pd.DataFrame(...)"}`).',
-    ),
 });
 
 export const solveProblemSchema = z.object({
@@ -90,11 +84,6 @@ export const solveProblemSchema = z.object({
     .string()
     .describe(
       'The name of the pre-defined model template (from `define_model`) to use.',
-    ),
-  data: z
-    .record(z.string(), z.unknown())
-    .describe(
-      'A dictionary of input data to be injected as global variables into the model\'s execution environment. The keys must match the variable names expected by the model code. For complex data like a Pandas DataFrame, provide it as a string that can be executed (e.g., `{"workers_df": "pd.DataFrame(...)"}`)',
     ),
   timeout: z
     .number()

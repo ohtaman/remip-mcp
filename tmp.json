@@ -1,1 +1,0 @@
-{"objective": {"name": null, "coefficients": [{"name": "__dummy", "value": 1}]}, "constraints": [], "variables": [{"lowBound": 0, "upBound": 0, "cat": "Continuous", "varValue": null, "dj": null, "name": "__dummy"}], "parameters": {"name": "NoName", "sense": 1, "status": 0, "sol_status": 0}, "sos1": [{
