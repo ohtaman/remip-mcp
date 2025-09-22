@@ -39,10 +39,17 @@ export async function solveProblem(
   const { storageService, pyodideRunner, remipClient, sendNotification } =
     services;
 
+  // Generate a unique progress token for this operation
+  const progressToken = `progress-${randomUUID()}`;
+
   try {
     await sendNotification({
-      method: 'progress',
-      params: { progress: 0, message: 'Starting problem solving...' },
+      method: 'notifications/progress',
+      params: {
+        progressToken,
+        progress: 0,
+        message: 'Starting problem solving...',
+      },
     });
 
     const model = storageService.getModel(sessionId, params.model_name);
@@ -86,8 +93,9 @@ json.dumps(result, cls=NumpyEncoder)
     const result = await pyodideRunner.run(sessionId, executionCode);
 
     await sendNotification({
-      method: 'progress',
+      method: 'notifications/progress',
       params: {
+        progressToken,
         progress: 0.3,
         message: 'Generating problem from model code...',
       },
@@ -132,8 +140,9 @@ json.dumps(result, cls=NumpyEncoder)
     }
 
     await sendNotification({
-      method: 'progress',
+      method: 'notifications/progress',
       params: {
+        progressToken,
         progress: 1.0,
         message: `Solve finished in ${solveTime.toFixed(3)} seconds. Status: ${solutionResult.status}.`,
       },
