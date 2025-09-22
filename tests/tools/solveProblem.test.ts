@@ -207,12 +207,17 @@ describe('solveProblem Tool', () => {
       });
 
       expect(mockSendNotification).toHaveBeenCalledWith({
-        method: 'progress',
-        params: { progress: 0, message: 'Starting problem solving...' },
+        method: 'notifications/progress',
+        params: {
+          progressToken: expect.stringMatching(/^progress-/),
+          progress: 0,
+          message: 'Starting problem solving...',
+        },
       });
       expect(mockSendNotification).toHaveBeenCalledWith({
-        method: 'progress',
+        method: 'notifications/progress',
         params: {
+          progressToken: expect.stringMatching(/^progress-/),
           progress: 0.3,
           message: 'Generating problem from model code...',
         },
@@ -226,8 +231,9 @@ describe('solveProblem Tool', () => {
         },
       });
       expect(mockSendNotification).toHaveBeenCalledWith({
-        method: 'progress',
+        method: 'notifications/progress',
         params: {
+          progressToken: expect.stringMatching(/^progress-/),
           progress: 1.0,
           message: expect.stringContaining(solutionStatus),
         },
