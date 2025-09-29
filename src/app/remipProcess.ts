@@ -9,13 +9,10 @@ export interface ReMIPInfo {
 
 let remipProcess: ChildProcess | null = null;
 
-export function startReMIPServer(
-  sourceURI: string,
-  logger: Logger,
-): Promise<ReMIPInfo> {
+export function startReMIPServer(logger: Logger): Promise<ReMIPInfo> {
   return new Promise((resolve, reject) => {
     const command = 'uvx';
-    const args = [`--from=${sourceURI}`, 'remip'];
+    const args = ['remip'];
     logger.info(
       { event: 'subprocess_spawn', command, args },
       `Executing: ${command} ${args.join(' ')}`,

@@ -1,4 +1,3 @@
-
 import { startReMIPServer } from '../../src/app/remipProcess.js';
 import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
@@ -33,7 +32,7 @@ describe('startReMIPServer', () => {
     const mockProcess = createMockProcess();
     mockedSpawn.mockReturnValue(mockProcess);
 
-    const serverPromise = startReMIPServer('some-uri', mockLogger);
+    const serverPromise = startReMIPServer(mockLogger);
 
     // Simulate the server starting and printing to stderr
     const stderrOutput = [
@@ -55,11 +54,13 @@ describe('startReMIPServer', () => {
     const mockProcess = createMockProcess();
     mockedSpawn.mockReturnValue(mockProcess);
 
-    const serverPromise = startReMIPServer('some-uri', mockLogger);
+    const serverPromise = startReMIPServer(mockLogger);
 
     // Simulate the process closing with an error code
     mockProcess.emit('close', 1);
 
-    await expect(serverPromise).rejects.toThrow('ReMIP server exited before ready (code 1)');
+    await expect(serverPromise).rejects.toThrow(
+      'ReMIP server exited before ready (code 1)',
+    );
   });
 });
