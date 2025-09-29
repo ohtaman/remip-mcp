@@ -1,4 +1,4 @@
-import { parseArgs } from "node:util";
+import { parseArgs } from 'node:util';
 
 export const defaultConfig = {
   // Start an HTTP server
@@ -9,16 +9,14 @@ export const defaultConfig = {
 
   // Information of ReMIP Server
   remipServer: {
-    host: "localhost",
+    host: 'localhost',
     port: 9000,
   },
 
   // Start local ReMIP Server
   startRemipServer: false,
-  // path to the ReMIP Server to start.
-  remipSourceURI: "git+https://github.com/ohtaman/remip.git#subdirectory=remip",
-  pyodidePackages: ["numpy", "pandas"],
-  micropipPackages: ["pulp"],
+  pyodidePackages: ['numpy', 'pandas'],
+  micropipPackages: ['pulp'],
 };
 
 export interface AppConfig {
@@ -29,22 +27,20 @@ export interface AppConfig {
     port: number;
   };
   startRemipServer: boolean;
-  remipSourceURI: string;
   pyodidePackages: string[];
   micropipPackages: string[];
 }
 
 export function processCommandOptions(): AppConfig {
   const options = {
-    http: { type: "boolean" },
-    port: { type: "string" },
-    "remip-host": { type: "string" },
-    "remip-port": { type: "string" },
-    "start-remip-server": { type: "boolean" },
-    "remip-source-uri": { type: "string"},
-    "pyodide-packages": { type: "string", multiple: true },
-    "micropip-packages": { type: "string", multiple: true },
-    help: { type: "boolean", short: "h" },
+    http: { type: 'boolean' },
+    port: { type: 'string' },
+    'remip-host': { type: 'string' },
+    'remip-port': { type: 'string' },
+    'start-remip-server': { type: 'boolean' },
+    'pyodide-packages': { type: 'string', multiple: true },
+    'micropip-packages': { type: 'string', multiple: true },
+    help: { type: 'boolean', short: 'h' },
   } as const;
 
   const { values: cliArgs } = parseArgs({
@@ -64,15 +60,14 @@ Options:
   --remip-host <host>          Hostname of the ReMIP server to connect to. This option is ignored if --start-remip-server is specified. (Default: ${defaultConfig.remipServer.host})
   --remip-port <port>          Port of the ReMIP server to connect to. This option is ignored if --start-remip-server is specified. (Default: ${defaultConfig.remipServer.port})
   --start-remip-server         Start a local ReMIP server on launch (Default: ${defaultConfig.startRemipServer})
-  --remip-source-uri           URL of the source code of the local ReMIP server to start (Default: ${defaultConfig.remipSourceURI})
   --pyodide-packages <package> Packages to install in Pyodide. Can be specified multiple times. (Default: ${defaultConfig.pyodidePackages.join(
-    ", "
+    ', ',
   )})
   --micropip-packages <package> Packages to install via micropip. Can be specified multiple times. (Default: ${defaultConfig.micropipPackages.join(
-    ", "
+    ', ',
   )})
   -h, --help                   Show this help message
-`.trimStart()
+`.trimStart(),
     );
     process.exit(0);
   }
@@ -80,17 +75,19 @@ Options:
   // Apply default values
   const config = {
     http: cliArgs.http ?? defaultConfig.http,
-    port: cliArgs["port"] ? parseInt(cliArgs["port"], 10) : defaultConfig.port,
+    port: cliArgs['port'] ? parseInt(cliArgs['port'], 10) : defaultConfig.port,
     remipInfo: {
-      host: cliArgs["remip-host"] ?? defaultConfig.remipServer.host,
-      port: cliArgs["remip-port"]
-        ? parseInt(cliArgs["remip-port"], 10)
+      host: cliArgs['remip-host'] ?? defaultConfig.remipServer.host,
+      port: cliArgs['remip-port']
+        ? parseInt(cliArgs['remip-port'], 10)
         : defaultConfig.remipServer.port,
     },
-    startRemipServer: cliArgs["start-remip-server"] ?? defaultConfig.startRemipServer,
-    remipSourceURI: cliArgs["remip-source-uri"] ?? defaultConfig.remipSourceURI,
-    pyodidePackages: cliArgs["pyodide-packages"] ?? defaultConfig.pyodidePackages,
-    micropipPackages: cliArgs["micropip-packages"] ?? defaultConfig.micropipPackages,
+    startRemipServer:
+      cliArgs['start-remip-server'] ?? defaultConfig.startRemipServer,
+    pyodidePackages:
+      cliArgs['pyodide-packages'] ?? defaultConfig.pyodidePackages,
+    micropipPackages:
+      cliArgs['micropip-packages'] ?? defaultConfig.micropipPackages,
   };
 
   return config;

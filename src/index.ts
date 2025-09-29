@@ -278,7 +278,7 @@ async function main() {
   let remipInfo: ReMIPInfo = config.remipInfo;
   if (config.startRemipServer) {
     try {
-      remipInfo = await startReMIPServer(config.remipSourceURI, logger);
+      remipInfo = await startReMIPServer(logger);
       config.remipInfo = remipInfo;
       logger.info(
         {
