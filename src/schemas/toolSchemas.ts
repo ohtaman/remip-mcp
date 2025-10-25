@@ -96,7 +96,7 @@ export const getSolutionSchema = z.object({
   include_zero_variables: z
     .boolean()
     .optional()
-    .default(true)
+    .default(false)
     .describe(
       'Whether to include variables with a value of zero in the output. If set to false, variables with a value of 0 will not be returned, which can reduce data size. (default: true)',
     ),
