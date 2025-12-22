@@ -16,7 +16,7 @@ export const defaultConfig = {
   // Start local ReMIP Server
   startRemipServer: false,
   pyodidePackages: ['numpy', 'pandas'],
-  micropipPackages: ['pulp'],
+  micropipPackages: ['pulp', 'tabulate'],
 };
 
 export interface AppConfig {
